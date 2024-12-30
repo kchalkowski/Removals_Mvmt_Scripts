@@ -83,6 +83,7 @@ saveRDS(akaer,file.path(objdir,"outdf_akde_aer_corrected_f.rds",fsep=.Platform$f
 saveRDS(aktrap,file.path(objdir,"outdf_akde_trap_corrected_f.rds",fsep=.Platform$file.sep))
 saveRDS(aktox,file.path(objdir,"outdf_akde_aktox_corrected_f.rds",fsep=.Platform$file.sep))
 
+
 # Geolocation data formatting --------------------------------------------------
 
 #Basic tidying
@@ -162,6 +163,9 @@ geo.aer$joinkey=paste(geo.aer$animalid,geo.aer$removal.period.akdecalc,sep="_")
 geo.trap$joinkey=paste(geo.trap$animalid,geo.trap$removal.period.akdecalc,sep="_")
 geo.tox$joinkey=paste(geo.tox$animalid,geo.tox$removal.period.akdecalc,sep="_")
   
+# Get column for week by dates
+
+
 # Calculate NSD ----------------------------------------------------------------
 
 #Make functions to calculate NSD
