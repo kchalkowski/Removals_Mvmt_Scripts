@@ -64,33 +64,7 @@ tox.end.date=as.Date("2023-03-09")
 aer.start.date=as.Date("2023-03-27")
 aer.end.date=as.Date("2023-03-29")
 
-# Determine removal designations -----------------------------------------------
-
-#load site data
-#trapntox_sites.raw=readRDS("/Volumes/Projects/MUDD/ASF_NIFA/Datasets/Daily_Activities_Trap_Locations/Activities_Tidying_Pipeline_KK/Data/Final/site.locations_tidied.RDS")
-
-# Read and format objects
-#tidied<-"/Volumes/Projects/MUDD/ASF_NIFA/Datasets/Movement data/Tidied_WP_Geolocations/3_tidied/"
-
-#load data
-#geolocations
-#filtered<-"/Volumes/Projects/MUDD/ASF_NIFA/Datasets/Movement data/Tidied_WP_Geolocations/4_filtered/"
-#geo=read.csv(paste0(filtered,"geolocs.csv"))
-
-#study site polygons
-#sd=loadNIFAspatial(c("cd_outline","aerial_pastures","ctrl_pastures","trap_pastures","eup_pastures"))
-ap=sd$aerial_pastures
-
-#flight path convex hulls
-#fp.chulls=readRDS("/Volumes/Projects/MUDD/ASF_NIFA/Datasets/Aerial_Flight_Paths/tidy_flightpaths/aerial_flightpaths_chull.rds")
-
-# * Get removal area convex hulls ----------------------------------------------
-
-#fp.chull.adj=st_convex_hull(st_union(fpts2)) %>% st_sf %>% st_cast
-
-#assign to old variable name to match code below
-#fp.chulls=readRDS("smb://aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Datasets/Aerial_Flight_Paths/tidy_flightpaths/aerial_flightpaths_chull.rds")
-
+#Format sites data
 tox.sites=trapntox_sites.raw[trapntox_sites.raw$activity=="toxic"&!is.na(trapntox_sites.raw$trap_status),]
 trap.sites=trapntox_sites.raw[trapntox_sites.raw$activity=="trap"&!is.na(trapntox_sites.raw$trap_status),]
 
@@ -99,6 +73,10 @@ trap.sites=trap.sites[!is.na(trap.sites$x),]
 
 tox.sites=st_as_sf(tox.sites,coords=c(6,7),crs=st_crs(32614))
 trap.sites=st_as_sf(trap.sites,coords=c(6,7),crs=st_crs(32614))
+
+# Determine removal designations -----------------------------------------------
+
+# * Get removal area convex hulls ----------------------------------------------
 
 trap.chull=st_convex_hull(st_union(trap.sites))
 tox.chull=st_convex_hull(st_union(tox.sites))
@@ -110,6 +88,8 @@ trap.chull = trap.chull %>%
 tox.chull = tox.chull %>%
   st_sf %>%
   st_cast
+
+#aerial convex hull
 
 # * Get pig MCPs respective to treatments ----------------------------------------
 
@@ -180,7 +160,6 @@ trt.sums=data.frame(
   avg_prop_overlap=c(mean(trap.trt$prop_overlap),mean(aer.trt$prop_overlap),mean(tox.trt$prop_overlap)),
   avg_area_overlap_km=c(mean(trap.trt$area_overlap)/1e6,mean(aer.trt$area_overlap)/1e6,mean(tox.trt$area_overlap)/1e6)
 )
-
 
 # * Control pig designations ---------------------------------------------------
 #Control site designations
@@ -544,3 +523,4 @@ write.csv(aer.overlaps.95,paste0(out.dir,"aer_mcp_overlaps_95_summary.csv"))
 write.csv(trap.overlaps,paste0(out.dir,"trap_mcp_overlaps_50_summary.csv"))
 write.csv(tox.overlaps,paste0(out.dir,"tox_mcp_overlaps_50_summary.csv"))
 write.csv(aer.overlaps,paste0(out.dir,"aer_mcp_overlaps_50_summary.csv"))
+
