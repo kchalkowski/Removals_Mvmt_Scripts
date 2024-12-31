@@ -3,8 +3,6 @@
 ### Date: 26NOV24
 ### uses ctmms fit by Kayleigh Chalkowski 
 
-#home dir is //aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt
-
 #input: georem type refrence file, ctmm trajectories
 #output: weekly summaries of speed and distance moved (i.e. ./1_Data/Objects/pig_weekly_speed_ctmm.rds and ./1_Data/Objects/pig_weekly_distance_ctmm.rds)
 
@@ -14,15 +12,23 @@ library(ctmm)
 library(Rcpp)
 library(RcppArmadillo)
 
-ctmm_dir <- "./1_Data/Objects/ctmm_Predictions/"
-out_dir <- "./1_Data/Objects/"
+homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
+# homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
 
-georem <- read.csv("./1_Data/Objects/geo_remtyp_period.csv")
+ctmm_dir <- paste0(homedir,"./1_Data/Objects/ctmm_Predictions/")
+out_dir <- paste0(homedir,"./1_Data/Objects/")
+objdir=file.path(homedir,"1_Data","Objects",fsep=.Platform$file.sep)
 
-georem$date_only <- as.Date(georem$date_only)
-georem$datetime <- as.POSIXct(georem$datetime,format="%Y-%m-%d %H:%M:%S", tz="UTC")
+# georem <- read.csv("./1_Data/Objects/geo_remtyp_period.csv")
+geo.aer<-readRDS(file.path(objdir,"geoaer.rds"))
+geo.tox<-readRDS(file.path(objdir,"geotox.rds"))
+geo.trap<-readRDS(file.path(objdir,"geotrap.rds"))
+geo.all <- rbind(geo.aer,geo.tox,geo.trap)
 
-pigs_trt <- georem %>% 
+# georem$date_only <- as.Date(georem$date_only)
+# georem$datetime <- as.POSIXct(georem$datetime,format="%Y-%m-%d %H:%M:%S", tz="UTC")
+
+pigs_trt <- geo.all %>% 
   group_by(Removal.Type,removal.period.akdecalc) %>% 
   reframe(animalid=unique(animalid))%>% 
   filter(!(Removal.Type=="aer" & removal.period.akdecalc=="during"))
@@ -32,20 +38,33 @@ aer_id <- pigs_trt %>% filter(Removal.Type=="aer")
 tox_id <- pigs_trt %>% filter(Removal.Type=="tox")
 trap_id <- pigs_trt %>% filter(Removal.Type=="trap")
 
-trt_week_orig <- georem %>% 
-  group_by(removal.period.akdecalc,Removal.Type,week,) %>% 
+trt_aer <- geo.aer %>%
+  group_by(removal.period.akdecalc,Removal.Type,week) %>%
   summarise(week_start = min(date_only),
             week_end = max(date_only))
 
-periods <- unique(georem$removal.period.akdecalc)
-rem_typ <- unique(georem$Removal.Type)[-1] #no control group
+trt_tox <- geo.tox %>%
+  group_by(removal.period.akdecalc,Removal.Type,week) %>%
+  summarise(week_start = min(date_only),
+            week_end = max(date_only))
+trt_trap <- geo.trap %>%
+  group_by(removal.period.akdecalc,Removal.Type,week) %>%
+  summarise(week_start = min(date_only),
+            week_end = max(date_only))
+
+periods <- unique(geo.all$removal.period.akdecalc)
+rem_typ <- unique(geo.all$Removal.Type)[-1] #no control group
 
 #source rcpp function
-cpp_dir <- "./2_Scripts/Functions/"
+cpp_dir <- "./Functions/"
 Rcpp::sourceCpp(paste0(cpp_dir,"TestPairwise.cpp"), verbose=TRUE)
 
 pig_dist_per_rem <- pig_speed_per_rem <- list()
-
+# i<-1
+# k<-1
+# j<-2
+geo.aer %>% filter(animalid==pig_id[j]) %>% select(date_only) %>% reframe(range(date_only))
+pig_id[j]
 for(i in 1:length(rem_typ)){
   
   pig_id <- list.files(paste0(ctmm_dir,rem_typ[i]))
@@ -79,7 +98,6 @@ for(i in 1:length(rem_typ)){
           
           traj_xy <- cbind.data.frame(x=traj$x,y=traj$y,date=traj$date,dist=traj$dist)
           
-          
           speed_mat <- traj_xy %>% 
             group_by(hour=floor_date(date,"hour")) %>% 
             summarise(hr_dist = sum(dist,na.rm=T),
@@ -107,30 +125,38 @@ for(i in 1:length(rem_typ)){
                    rem_typ=rem_typ[i],
                    period=periods[k])
           
+          if(rem_typ[i]=="aer"){
+            trt_week <- trt_aer
+          } else if(rem_typ[i]=="tox"){
+            trt_week <- trt_tox
+          } else {
+            trt_week <- trt_trap
+          }
+
           speed_mat$week <- sapply(1:nrow(speed_mat),function(x){
-            wk <- unique(trt_week_orig$week[trt_week_orig$week_start<=as.Date(speed_mat$hour[x]) &
-                                       trt_week_orig$week_end>=as.Date(speed_mat$hour[x]) &
-                                       trt_week_orig$removal.period.akdecalc==periods[k] &
-                                       trt_week_orig$Removal.Type==rem_typ[i]])
+            wk <- unique(trt_week$week[trt_week$week_start<=as.Date(speed_mat$hour[x]) &
+                                       trt_week$week_end>=as.Date(speed_mat$hour[x]) &
+                                       trt_week$removal.period.akdecalc==periods[k] &
+                                       trt_week$Removal.Type==rem_typ[i]])
             if(sum(wk)==0){
               # wk<-NA
-              wk <- unique(trt_week_orig$week[trt_week_orig$week_start<=as.Date(speed_mat$hour[x]) &
-                                         trt_week_orig$week_end>=as.Date(speed_mat$hour[x]) &
-                                         trt_week_orig$Removal.Type=="ctrl"])
+              wk <- unique(trt_week$week[trt_week$week_start<=as.Date(speed_mat$hour[x]) &
+                                         trt_week$week_end>=as.Date(speed_mat$hour[x]) &
+                                         trt_week$Removal.Type=="ctrl"])
             }
             return(wk)
           })
           
           dist_mat$week <- sapply(1:nrow(dist_mat),function(x){
-            wk <- unique(trt_week_orig$week[trt_week_orig$week_start<=as.Date(dist_mat$day[x]) &
-                                       trt_week_orig$week_end>=as.Date(dist_mat$day[x]) &
-                                       trt_week_orig$removal.period.akdecalc==periods[k] &
-                                       trt_week_orig$Removal.Type==rem_typ[i]])
+            wk <- unique(trt_week$week[trt_week$week_start<=as.Date(dist_mat$day[x]) &
+                                       trt_week$week_end>=as.Date(dist_mat$day[x]) &
+                                       trt_week$removal.period.akdecalc==periods[k] &
+                                       trt_week$Removal.Type==rem_typ[i]])
             if(sum(wk)==0){
               # wk<-NA
-              wk <- unique(trt_week_orig$week[trt_week_orig$week_start<=as.Date(dist_mat$day[x]) &
-                                         trt_week_orig$week_end>=as.Date(dist_mat$day[x]) &
-                                         trt_week_orig$Removal.Type=="ctrl"])
+              wk <- unique(trt_week$week[trt_week$week_start<=as.Date(dist_mat$day[x]) &
+                                         trt_week$week_end>=as.Date(dist_mat$day[x]) &
+                                         trt_week$Removal.Type=="ctrl"])
             }
             return(wk)
           })
