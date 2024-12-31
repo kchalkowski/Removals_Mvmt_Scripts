@@ -1,4 +1,17 @@
 
+#Need revise this a bit more
+#Pipeline in proc data folder:
+  #1_Prep_Geolocation_Data
+    #-does removal designations, periods, week splits
+    #-remove week trimming from this script!
+  #2_Get_Period_AKDEs
+    #-trims pig period data as needed
+    #-fits ctmm for each pig/period/removal
+    #-outputs area df
+
+#Next steps for tomorrow:
+#3-finish cleaning up 4_Preanalysisformatting (should just be NSD calcs, move to NSD folder)
+
 #set home dir of pipeline
 home<-"/Users/kayleigh.chalkowski/OneDrive - USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
 
@@ -10,6 +23,9 @@ home<-"/Users/kayleigh.chalkowski/OneDrive - USDA/Projects/NIFA_Analyses/NIFA_Re
   #week
 
 # Process ----------------------------------------------------------------------
+
+#In: geo.csv, geolocation data
+#Out: geotox.rds, geoaer.rds, geotrap.rds 
 
 # Removal designations
 #1. pull geolocs, needed objects 
@@ -51,6 +67,7 @@ for(f in 1:length(func.list)){
 
 #Set dates for before, during, after periods for each removal type
 #trap dates
+activities.raw=readRDS(file.path(input,"activities.rds",fsep=.Platform$file.sep))
 trap.act=activities.raw[activities.raw$activity=="trap",]
 trap.start.date=as.Date(min(trap.act$datetime))
 trap.end.date=as.Date(max(trap.act$datetime))
@@ -232,8 +249,6 @@ all.selected.IDs=c(ctrl.pig.IDs,trap.pig.IDs,tox.pig.IDs,aer.pig.IDs)
 
 not.selected=unique(geo$animalid)[which(!unique(geo$animalid)%in%all.selected.IDs)]
 
-geo[geo$animalid%in%not.selected,] %>% group_by(animalid) %>% summarise(mindt=min(date_only),maxdt=max(date_only))
-
 #cutoff by date:
 #48462_E6_E6
 #48467_H6_H6
@@ -268,20 +283,20 @@ gns %>% group_by(animalid) %>% summarise(mindt=min(date_only),maxdt=max(date_onl
 #85396_2_L2_L2 near aerial, data ends 2/28
 
 #48464_E5_E5 overlaps, but must not have been overlap with 50% MCP core
-base+chulls+mapview(gnsf[gnsf$animalid=="48464_E5_E5",] |>
-                      filter(jDate>=which(jdates$dates==trap.start.date)&jDate<=which(jdates$dates==trap.end.date)))
+#base+chulls+mapview(gnsf[gnsf$animalid=="48464_E5_E5",] |>
+#                      filter(jDate>=which(jdates$dates==trap.start.date)&jDate<=which(jdates$dates==trap.end.date)))
 
 #85434_2_3K_3K didn't have enough points during aerial gunning to properly estimate MCP
 #no points during that time period available
-base+chulls+mapview(gnsf[gnsf$animalid=="85434_2_3K_3K",] |>
-                      filter(jDate>=which(jdates$dates==aer.start.date)&jDate<=which(jdates$dates==aer.end.date)))
+#base+chulls+mapview(gnsf[gnsf$animalid=="85434_2_3K_3K",] |>
+#                      filter(jDate>=which(jdates$dates==aer.start.date)&jDate<=which(jdates$dates==aer.end.date)))
 
 #because was the satellite one, poor resolution, points every 4 hours
-chulls+mapview(gnsf[gnsf$animalid=="85434_2_3K_3K",])
+#chulls+mapview(gnsf[gnsf$animalid=="85434_2_3K_3K",])
 
 #48461_B4_B4 overlaps, but must have been no overlap with 50% MCP core
-base+chulls+mapview(gnsf[gnsf$animalid=="48461_B4_B4",] |>
-                      filter(jDate>=which(jdates$dates==trap.start.date)&jDate<=which(jdates$dates==trap.end.date)))
+#base+chulls+mapview(gnsf[gnsf$animalid=="48461_B4_B4",] |>
+                     #filter(jDate>=which(jdates$dates==trap.start.date)&jDate<=which(jdates$dates==trap.end.date)))
 
 #*48447_3Y_3Y overlaps a bit, but must have been no overlap with 50% MCP core
 #base+chulls+mapview(gnsf[gnsf$animalid=="48447_3Y_3Y",] |>
@@ -301,11 +316,16 @@ base+chulls+mapview(gnsf[gnsf$animalid=="48461_B4_B4",] |>
 
 #Note: actually 14, 48447_3Y_3Y moved to trap after geolocation tidying fix
 
-#Removing three more pigs: 
+#Removing three more pigs from aer: 
 #aerial pigs that were accidentally culled
 aer.pig.IDs=aer.pig.IDs[aer.pig.IDs!="48476_2_4Y_4Y"&
               aer.pig.IDs!="85401_2_U_U"&
               aer.pig.IDs!="85440_E2_E2"]
+not.selected=c(not.selected,"48476_2_4Y_4Y","85401_2_U_U","85440_E2_E2")
+
+#tox pig not trapped in before tox period:
+tox.pig.IDs=tox.pig.IDs[tox.pig.IDs!="86070_H2_H2"]
+not.selected=c(not.selected,"86070_H2_H2")
 
 # * Link designations to geolocs -----------------------------------------------
 
@@ -464,63 +484,13 @@ geo.aer=Do.Week.Split(geo.aer,"aer",c(aer.origin,aer.origin.after))
 geo.trap=Do.Week.Split(geo.trap,"trap",c(trap.origin,trap.origin.after,trap.origin.during))
 geo.tox=Do.Week.Split(geo.tox,"tox",c(tox.origin,tox.origin.after,tox.origin.during))
 
-# * Trim incomplete weeks ------------------------------------------------------
-
-#Aerial
-aerchk=geo.aer %>% 
-  group_by(animalid,removal.period.akdecalc,week) %>% 
-  dplyr::summarise(n_distinct(jDate)) %>%
-  as.data.frame()
-#remove week 6 and 12, only two days
-geo.aer=geo.aer[geo.aer$week!=12,]
-geo.aer=geo.aer[geo.aer$week!=6,]
-
-#Trap
-trapchk=geo.trap %>% 
-  group_by(animalid,removal.period.akdecalc,week) %>% 
-  dplyr::summarise(n_distinct(jDate)) %>%
-  as.data.frame()
-#remove week 25, only 1 days
-#geo.trapd2=geo.trapd2[geo.trapd2$week!=25,]
-#wks 9 and 26-- all only 1 day
-geo.trap=geo.trap[geo.trap$week!=9,]
-geo.trap=geo.trap[geo.trap$week!=26,]
-
-#each below combo has <6 days
-geo.trap=geo.trap[!(geo.trap$week==18&geo.trap$animalid=="48458_A4_A4"),]
-geo.trap=geo.trap[!(geo.trap$week==18&geo.trap$animalid=="48479_T2_T2"),]
-geo.trap=geo.trap[!(geo.trap$week==20&geo.trap$animalid=="85411_C3_C3"),]
-geo.trap=geo.trap[!(geo.trap$week==24&geo.trap$animalid=="48460_B3_B3"),]
-geo.trap=geo.trap[!(geo.trap$week==21&geo.trap$animalid=="85454_1W_1W"),]
-geo.trap=geo.trap[!(geo.trap$week==22&geo.trap$animalid=="48468_J6_J6"),]
-
-#Tox
-toxchk=geo.tox %>% 
-  group_by(animalid,removal.period.akdecalc,week) %>% 
-  dplyr::summarise(n_distinct(jDate)) %>%
-  as.data.frame()
-
-#very short weeks for 6, 15
-geo.tox=geo.tox[geo.tox$week!=6,]
-geo.tox=geo.tox[geo.tox$week!=15,]
-
-#short weeks for certain IDs for weeks 14/10/9
-geo.tox=geo.tox[!(geo.tox$week==14&geo.tox$animalid=="86063_C6_C6"),]
-geo.tox=geo.tox[!(geo.tox$week==10&geo.tox$animalid=="86070_H2_H2"),]
-geo.tox=geo.tox[!(geo.tox$week==9&geo.tox$animalid=="86071_Y2_Y2"),]
-geo.tox=geo.tox[!(geo.tox$week==9&geo.tox$animalid=="86079_B1_B1"),]
-geo.tox=geo.tox[!(geo.tox$week==9&geo.tox$animalid=="85734_T6_T6"),]
-geo.tox=geo.tox[!(geo.tox$week==9&geo.tox$animalid=="85735_7K_7K"),]
-
 # Write out data and summaries -------------------------------------------------
 
 #write out csv
 out.dir<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/"
-write.csv(geo,paste0(out.dir,"geo_remtyp.csv"))
-write.csv(trap.overlaps.95,paste0(out.dir,"trap_mcp_overlaps_95_summary.csv"))
-write.csv(tox.overlaps.95,paste0(out.dir,"tox_mcp_overlaps_95_summary.csv"))
-write.csv(aer.overlaps.95,paste0(out.dir,"aer_mcp_overlaps_95_summary.csv"))
-write.csv(trap.overlaps,paste0(out.dir,"trap_mcp_overlaps_50_summary.csv"))
-write.csv(tox.overlaps,paste0(out.dir,"tox_mcp_overlaps_50_summary.csv"))
-write.csv(aer.overlaps,paste0(out.dir,"aer_mcp_overlaps_50_summary.csv"))
+#write.csv(geo,paste0(out.dir,"geo_remtyp.csv"))
+saveRDS(geo.tox,file.path(objdir,"geotox.rds"))
+saveRDS(geo.trap,file.path(objdir,"geotox.rds"))
+saveRDS(geo.aer,file.path(objdir,"geotox.rds"))
+
 
