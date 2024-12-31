@@ -17,6 +17,7 @@ library(amt)
 library(dplyr)
 library(stringr)
 library(sf)
+library(forcats)
 
 #Set dirs
 input=file.path(home,"1_Data","Input",fsep=.Platform$file.sep)
@@ -45,13 +46,28 @@ trimwks=function(geo.rem,mindays){
   remchk2=remchk[remchk$minday<mindays,]
   
   for(i in 1:nrow(remchk2)){
-    geo.rem2=geo.rem[!(geo.rem$animalid==remchk2$animalid[i]&
+    geo.rem=geo.rem[!(geo.rem$animalid==remchk2$animalid[i]&
               geo.rem$removal.period.akdecalc==remchk2$removal.period.akdecalc[i]&
               geo.rem$week==remchk2$week[i]),]
     
   }
   
-  return(geo.rem2)
+  return(geo.rem)
+  
+}
+
+#Make another function to adjust week intervals
+adjust_intvals<-function(geo.rem){
+  ids=unique(geo.rem$animalid)
+  for(i in 1:length(ids)){
+    geo.rem_i=geo.rem[geo.rem$animalid==ids[i],]
+    key1=unique(geo.rem_i$week)
+    key2=1:length(key1)
+    
+    geo.rem_
+    
+  }
+  
   
 }
 
@@ -116,9 +132,19 @@ geo.aerd.wk=geo.aerd %>% group_by(animalid, Removal.Type, removal.period.akdecal
 geo.trapd.wk=geo.trapd %>% group_by(animalid, Removal.Type, removal.period.akdecalc,sex, week) %>% dplyr::summarise(mNSD=median(NSD),mX=mean(X),mY=mean(Y)) %>% as.data.frame()
 geo.toxd.wk=geo.toxd %>% group_by(animalid, Removal.Type, removal.period.akdecalc,sex, week) %>% dplyr::summarise(mNSD=median(NSD),mX=mean(X),mY=mean(Y)) %>% as.data.frame()
 
+#Relevel periods
+geo.aerd.wk$removal.period.akdecalc<-fct_relevel(geo.aerd.wk$removal.period.akdecalc,c("before","during"))
+geo.trapd.wk$removal.period.akdecalc<-fct_relevel(geo.trapd.wk$removal.period.akdecalc,c("before","during"))
+geo.toxd.wk$removal.period.akdecalc<-fct_relevel(geo.toxd.wk$removal.period.akdecalc,c("before","during"))
+
+#Relevel removal types
+geo.aerd.wk$Removal.Type<-fct_relevel(geo.aerd.wk$Removal.Type,"ctrl")
+geo.trapd.wk$Removal.Type<-fct_relevel(geo.trapd.wk$Removal.Type,"ctrl")
+geo.toxd.wk$Removal.Type<-fct_relevel(geo.toxd.wk$Removal.Type,"ctrl")
+
 # Write out data ---------------------------------------------------------------
 
 saveRDS(geo.aerd.wk,file.path(objdir,"NSDgeoaer.rds",fsep=.Platform$file.sep))
 saveRDS(geo.trapd.wk,file.path(objdir,"NSDgeotrap.rds",fsep=.Platform$file.sep))
 saveRDS(geo.toxd.wk,file.path(objdir,"NSDgeotox.rds",fsep=.Platform$file.sep))
-
+#replace geo_toxd_wk.rds
