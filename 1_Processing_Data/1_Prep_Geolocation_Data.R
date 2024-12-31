@@ -11,7 +11,7 @@ home<-"/Users/kayleigh.chalkowski/OneDrive - USDA/Projects/NIFA_Analyses/NIFA_Re
 
 # Process ----------------------------------------------------------------------
 
-#In: geo.csv, geolocation data
+#In: geo.csv (geolocation data)
 #Out: geotox.rds, geoaer.rds, geotrap.rds 
 
 # Removal designations
@@ -21,11 +21,12 @@ home<-"/Users/kayleigh.chalkowski/OneDrive - USDA/Projects/NIFA_Analyses/NIFA_Re
     #a-50% mcps, to determine treatment pigs
     #b-95% mcps, to determine control pigs
 #4. summarize pigs not included in any treatment
-#5. write out geolocation data with treatment/control designations
 
 # Period
+#set period using cutoff dates
 
 # Week
+#start week counts per removal period dataset
 
 # Setup ----------------------------------------------------------------------
 
@@ -268,41 +269,22 @@ gnsf=st_as_sf(gns,coords=c("X","Y"),crs=st_crs(32614))
 gns %>% group_by(animalid) %>% summarise(mindt=min(date_only),maxdt=max(date_only))
 #85403_S7_S7 near aerial, but data ends 2/28
 #85396_2_L2_L2 near aerial, data ends 2/28
-
 #48464_E5_E5 overlaps, but must not have been overlap with 50% MCP core
-#base+chulls+mapview(gnsf[gnsf$animalid=="48464_E5_E5",] |>
-#                      filter(jDate>=which(jdates$dates==trap.start.date)&jDate<=which(jdates$dates==trap.end.date)))
-
 #85434_2_3K_3K didn't have enough points during aerial gunning to properly estimate MCP
-#no points during that time period available
-#base+chulls+mapview(gnsf[gnsf$animalid=="85434_2_3K_3K",] |>
-#                      filter(jDate>=which(jdates$dates==aer.start.date)&jDate<=which(jdates$dates==aer.end.date)))
-
-#because was the satellite one, poor resolution, points every 4 hours
-#chulls+mapview(gnsf[gnsf$animalid=="85434_2_3K_3K",])
-
 #48461_B4_B4 overlaps, but must have been no overlap with 50% MCP core
-#base+chulls+mapview(gnsf[gnsf$animalid=="48461_B4_B4",] |>
-                     #filter(jDate>=which(jdates$dates==trap.start.date)&jDate<=which(jdates$dates==trap.end.date)))
-
-#*48447_3Y_3Y overlaps a bit, but must have been no overlap with 50% MCP core
-#base+chulls+mapview(gnsf[gnsf$animalid=="48447_3Y_3Y",] |>
-#                      filter(jDate>=which(jdates$dates==trap.start.date)&jDate<=which(jdates$dates==trap.end.date)))
-#base+chulls+mapview(gnsf[gnsf$animalid=="48447_3Y_3Y",] |>
-#                      filter(jDate>=which(jdates$dates==tox.start.date)&jDate<=which(jdates$dates==tox.end.date)))
-#* Note: ^^was added to treatment area after geolocation tidying fix
+    #*48447_3Y_3Y overlaps a bit, but must have been no overlap with 50% MCP core
+    #* Note: ^^was added to treatment area after geolocation tidying fix
 
 #Summary:
-#15 pigs not used for any treatment or ctrls
-#Of these 15, 
+#14 pigs not used for any treatment or ctrls
+#Of these 14, 
 #9 of these pigs were not collared during any of the treatment dates
 #2 pigs overlapped with aerial but collar data ends before aerial treatment dates
-#2 pigs did not have 50% core MCP home ranges that overlapped with any treatment area
+#1 pigs did not have 50% core MCP home ranges that overlapped with any treatment area
 #1 pig did not have enough points to calculate 50% MCP core range overlap in treatment area of interest
 #1 pig removed earlier during tidying/filtering process-- malfunctioning mortality signal
 
-#Note: actually 14, 48447_3Y_3Y moved to trap after geolocation tidying fix
-
+#In addition:
 #Removing three more pigs from aer: 
 #aerial pigs that were accidentally culled
 aer.pig.IDs=aer.pig.IDs[aer.pig.IDs!="48476_2_4Y_4Y"&
@@ -310,12 +292,13 @@ aer.pig.IDs=aer.pig.IDs[aer.pig.IDs!="48476_2_4Y_4Y"&
               aer.pig.IDs!="85440_E2_E2"]
 not.selected=c(not.selected,"48476_2_4Y_4Y","85401_2_U_U","85440_E2_E2")
 
-#tox pig not trapped in before tox period:
+#tox pig without any data in before tox period:
 tox.pig.IDs=tox.pig.IDs[tox.pig.IDs!="86070_H2_H2"]
 not.selected=c(not.selected,"86070_H2_H2")
 
-# * Link designations to geolocs -----------------------------------------------
+#18 pigs removed in total
 
+# * Link designations to geolocs -----------------------------------------------
 geo$Removal.Type=NA
 
 geo[geo$animalid%in%ctrl.pig.IDs,]$Removal.Type="ctrl"
@@ -325,7 +308,6 @@ geo[geo$animalid%in%tox.pig.IDs,]$Removal.Type="tox"
 
 #Remove pigs with NA removal types-- not designated
 geo=geo[!is.na(geo$Removal.Type),]
-#nrow(geo) #1416606
 
 #Clean up unneeded columns used for removal designations
 #will redo week/day designations later relative to each removal area
@@ -475,9 +457,6 @@ geo.tox=Do.Week.Split(geo.tox,"tox",c(tox.origin,tox.origin.after,tox.origin.dur
 
 #write out csv
 out.dir<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/"
-#write.csv(geo,paste0(out.dir,"geo_remtyp.csv"))
 saveRDS(geo.tox,file.path(objdir,"geotox.rds"))
 saveRDS(geo.trap,file.path(objdir,"geotox.rds"))
 saveRDS(geo.aer,file.path(objdir,"geotox.rds"))
-
-
