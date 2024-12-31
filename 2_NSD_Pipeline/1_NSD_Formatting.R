@@ -64,17 +64,24 @@ adjust_intvals<-function(geo.rem){
     key1=unique(geo.rem_i$week)
     key2=1:length(key1)
     
-    geo.rem_
-    
+    for(k in 1:length(key1)){
+      geo.rem[geo.rem$animalid==ids[i]&
+              geo.rem$week==key1[k],]$week<-key2[k]
+    }
+    return(geo.rem)
   }
-  
-  
 }
 
 #Trim incomplete weeks
 geo.aer=trimwks(geo.aer,6)
 geo.trap=trimwks(geo.trap,6)
 geo.tox=trimwks(geo.tox,6)
+
+#Adjust intervals, skip over incomplete weeks
+geo.aer=adjust_intvals(geo.aer)
+geo.trap=adjust_intvals(geo.trap)
+geo.tox=adjust_intvals(geo.tox)
+
 
 #View summary
 nrow(geo.tox) #315490
