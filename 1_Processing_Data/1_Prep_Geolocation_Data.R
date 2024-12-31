@@ -458,5 +458,5 @@ geo.tox=Do.Week.Split(geo.tox,"tox",c(tox.origin,tox.origin.after,tox.origin.dur
 #write out csv
 out.dir<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/"
 saveRDS(geo.tox,file.path(objdir,"geotox.rds"))
-saveRDS(geo.trap,file.path(objdir,"geotox.rds"))
-saveRDS(geo.aer,file.path(objdir,"geotox.rds"))
+saveRDS(geo.trap,file.path(objdir,"geotrap.rds"))
+saveRDS(geo.aer,file.path(objdir,"geoaer.rds"))
