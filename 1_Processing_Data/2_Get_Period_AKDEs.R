@@ -1,131 +1,52 @@
-#
+
+#set home dir of pipeline
+home<-"/Users/kayleigh.chalkowski/OneDrive - USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
+
+# Purpose ----------------------------------------------------------------------
+
+#The purpose of this script is to output AKDE objects by period/remoavl type
+
+# Process ----------------------------------------------------------------------
+
+#In: geotox.rds, geoaer.rds, geotrap.rds 
+
+# Removal designations
+#1. pull geolocs, needed objects 
+#2. get trap/tox chulls and flight paths
+#3. get mcps for all pigs, respective to each treatment area and summarise overlap
+#a-50% mcps, to determine treatment pigs
+#b-95% mcps, to determine control pigs
+#4. summarize pigs not included in any treatment
+#5. write out geolocation data with treatment/control designations
+
+# Period
+
+# Week
+
+# Setup ----------------------------------------------------------------------
+
+#load libraries
 library(amt)
-library(sf)
-library(stringr)
 library(dplyr)
+library(stringr)
+library(sf)
 library(ctmm)
 library(beepr)
 
-####save objects needed to run on linux workstation
-#ws.folder="/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Workstation_Run"
-#saveRDS(fp.chulls,paste0(ws.folder,"/fp.chulls"))
+#set directories
+input=file.path(home,"1_Data","Input",fsep=.Platform$file.sep)
+objdir=file.path(home,"1_Data","Objects",fsep=.Platform$file.sep)
+funcdir<-file.path(home,"2_Scripts","Functions",fsep=.Platform$file.sep)
 
-#read objects from input
-input="/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/1_Data/Input/"
-sitelocs=readRDS(paste0(input,"trapntox_sites.raw.rds")) #trap/tox site locs
-fp.chulls=readRDS(paste0(input,"fp.chulls.rds")) #flight path convex hulls
-activities.raw=readRDS(paste0(input,"activities.rds"))
+#Read geoloc data
+geo.tox<-readRDS(file.path(objdir,"geotox.rds"))
+geo.aer<-readRDS(file.path(objdir,"geoaer.rds"))
+geo.trap<-readRDS(file.path(objdir,"geotrap.rds"))
 
-#read geolocation data
-home<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/1_Data/"
-geo=read.csv(paste0(home,"geo_remtyp.csv"))
-geo=geo[,-1]
-geo=geo[!is.na(geo$Removal.Type),]
-geo$date_only<-as.Date(geo$date_only)
+# Format data for period-level analysis ----------------------------------------
 
-#get ID refs to join later
-geo.id=unique(geo[,c(1:4,14)])
+# * Get summaries for each pig/period ------------------------------------------
 
-#Get tox/trap chulls
-tox.sites=sitelocs[sitelocs$activity=="toxic",]
-trap.sites=sitelocs[sitelocs$activity=="trap",]
-
-tox.sites=st_as_sf(tox.sites,coords=c(6,7),crs=st_crs(32614))
-trap.sites=st_as_sf(trap.sites,coords=c(6,7),crs=st_crs(32614))
-
-trap.chull=st_convex_hull(st_union(trap.sites))
-tox.chull=st_convex_hull(st_union(tox.sites))
-
-trap.chull = trap.chull %>%
-  st_sf %>%
-  st_cast
-
-tox.chull = tox.chull %>%
-  st_sf %>%
-  st_cast
-
-#Source needed functions
-funcdir<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/2_Scripts/Functions"
-func.list=list.files(funcdir,full.names=TRUE)
-for(f in 1:length(func.list)){
-  source(func.list[f])
-}
-
-{
-  #trap dates
-  trap.act=activities.raw[activities.raw$activity=="trap",]
-  #trap.act$trap_datetime=Neat.Dates.POSIXct(trap.act$datetime,tz="UTC")
-  trap.start.date=as.Date(min(trap.act$datetime))
-  trap.end.date=as.Date(max(trap.act$datetime))
-  
-  #tox dates
-  tox.act=activities.raw[activities.raw$activity=="toxic",]
-  #tox.act$tox_datetime=Neat.Dates.POSIXct(tox.act$tox_datetime,tz="UTC")
-  tox.start.date=as.Date(min(tox.act$datetime))
-  tox.end.date=as.Date("2023-03-09")
-  
-  #aerial dates
-  aer.start.date=as.Date("2023-03-27")
-  aer.end.date=as.Date("2023-03-29")
-  
-}
-
-#Get cutoffs for each removal type
-#Aerial 
-#determined 4 weeks from sensitivity analysis
-#geo.aer=geo2[geo2$Removal.Type=="aer"|geo2$Removal.Type=="ctrl",]
-aer.cutoff1=aer.start.date-37
-aer.cutoff2=aer.end.date+37
-
-#Trap
-#use length of time in trap after period (smaller than during period)
-trap.len=as.Date(max(geo[geo$Removal.Type=="trap",]$date_only))-as.Date(trap.end.date)-1
-#use as trap start date, 56 days before trap end date
-#think this is when trapping really started more intensively, anyways
-trap.start.date.akde=trap.end.date-trap.len-1
-trap.cutoff1=trap.start.date-trap.len-1
-trap.cutoff2=trap.end.date+trap.len+1
-
-#Tox
-#use length of time in tox period
-#tox.len=tox.end.date-tox.start.date
-tox.len=36
-tox.cutoff1=tox.start.date-tox.len-1
-tox.cutoff2=tox.end.date+tox.len+1
-
-#removal="tox"
-#cutoff1=tox.cutoff1
-#cutoff2=tox.cutoff2
-#startdate=tox.start.date
-#enddate=tox.end.date
-Do.Date.Cutoffs<-function(geo,removal,cutoff1,cutoff2,startdate,enddate){
-  geo.rem=geo[geo$Removal.Type==removal|geo$Removal.Type=="ctrl",]
-  geo.rem.before=geo.rem[geo.rem$date_only>=cutoff1&geo.rem$date_only<startdate,]
-  geo.rem.after=geo.rem[geo.rem$date_only>enddate&geo.rem$date_only<=cutoff2,]
-  geo.rem.during=geo.rem[geo.rem$date_only>=startdate&geo.rem$date_only<=enddate,]
-  geo.rem.before$removal.period.akdecalc="before"
-  geo.rem.after$removal.period.akdecalc="after"
-  geo.rem.during$removal.period.akdecalc="during"
-  geo.rem=rbind(geo.rem.before,geo.rem.during,geo.rem.after)
-  return(geo.rem)
-}
-
-geo.aer=Do.Date.Cutoffs(geo,"aer",aer.cutoff1,aer.cutoff2,aer.start.date,aer.end.date)
-#geo.trap=Do.Date.Cutoffs(geo,"trap",trap.cutoff1,trap.cutoff2,trap.start.date.akde,trap.end.date)
-geo.tox=Do.Date.Cutoffs(geo,"tox",tox.cutoff1,tox.cutoff2,tox.start.date,tox.end.date)
-
-#do trap ones manually
-geo.rem=geo[geo$Removal.Type=="trap"|geo$Removal.Type=="ctrl",]
-geo.rem.before=geo.rem[geo.rem$date_only>=trap.cutoff1&geo.rem$date_only<trap.start.date,]
-geo.rem.after=geo.rem[geo.rem$date_only>trap.end.date&geo.rem$date_only<=trap.cutoff2,]
-geo.rem.during=geo.rem[geo.rem$date_only>trap.start.date.akde&geo.rem$date_only<=trap.end.date,]
-geo.rem.before$removal.period.akdecalc="before"
-geo.rem.after$removal.period.akdecalc="after"
-geo.rem.during$removal.period.akdecalc="during"
-geo.rem=rbind(geo.rem.before,geo.rem.during,geo.rem.after)
-geo.trap=geo.rem
-
-#verification
 geo.tox.sums=
   geo.tox %>% 
   dplyr::group_by(animalid,removal.period.akdecalc) %>% 
@@ -153,26 +74,15 @@ geo.aer.sums=
                    end.date=max(date_only))
 geo.aer.sums$difftime=as.Date(geo.aer.sums$end.date)-as.Date(geo.aer.sums$strt.date)
 
-#View(geo.trap.sums)
+# * Trim pigs with incomplete periods ------------------------------------------
 
-######Trim based on above summaries
+# Trim based on above summaries
 #remove any pigs that were tracked less than half the number of days of other pigs in any period
 datestooshort.trap=geo.trap.sums[geo.trap.sums$difftime<(trap.len/2),]$animalid
 geo.trap=geo.trap[!geo.trap$animalid%in%datestooshort.trap,]
 
-#datestooshort.tox=geo.tox.sums[geo.tox.sums$difftime<(tox.len/2),]$animalid
-datestooshort.tox=c("86070_H2_H2")
-geo.tox=geo.tox[!geo.tox$animalid%in%datestooshort.tox,]
-
-######
-
-###Remove geolocations with very short minimum time intervals
-#geo.rem<-geo.trap
+# Remove geolocations with very short minimum time intervals
 thresh=as.difftime(5,units="mins")
-#geo.rem<-geo.rem[geo.rem$animalid=="85428_B2_B2",]
-#geo.rem$datetime<-Neat.Dates.POSIXct(geo.rem$datetime,tz="UTC")
-#testing=Remove.Geo.Intervals(geo.rem,thresh)
-#geo.rem=geo.pig.per
 Remove.Geo.Intervals<-function(geo.rem,thresh){
   geo.rem$dtlag=dplyr::lag(geo.rem$datetime)
   geo.rem$difft=geo.rem$datetime-geo.rem$dtlag
@@ -185,7 +95,8 @@ Remove.Geo.Intervals<-function(geo.rem,thresh){
   return(geo.out)
 }
 
-#Set AKDE functions
+# Make functions to model CTMMS ----------------------------------------------
+
 #Function to convert geolocs to telemetry format
 Convert.Telemetry<-function(geolocs){
   id.n=which(colnames(geolocs)=="animalid")
@@ -198,8 +109,8 @@ Convert.Telemetry<-function(geolocs){
   te1 <- ctmm::as.telemetry(tk,projection=crs_str)
   return(te1)
 }
-#pigID="48449_4A_4A"
-#Revise AKDE function for periods instead of weeks
+
+#AKDE function for periods
 GetAKDE_AC<-function(te1,akde.outdir,pigID,period.str,removal.str){
   out.df=data.frame(matrix(nrow=1,ncol=12))
   colnames(out.df)=c("animalid","period",
@@ -222,18 +133,12 @@ GetAKDE_AC<-function(te1,akde.outdir,pigID,period.str,removal.str){
     if(!dir.exists(paste0(outdir))){dir.create(paste0(outdir))}
     if(!dir.exists(paste0(outdir,pigID))){dir.create(paste0(outdir,pigID))}
     saveRDS(FIT1_pHREML,paste0(outdir,pigID,"/",pigID,"_",period.str,".rds"))
+    
     #Get area estimation
     print("getting akde area estimation")
     UD1_pHREML <- akde(te1, FIT1_pHREML)
     area.est=summary(UD1_pHREML)$CI
     area.units=rownames(summary(UD1_pHREML)$CI)
-    #if(length(grep("square meters",rownames(summary(UD1_pHREML)$CI)))>0){
-    #  area.est=area.est/1000000
-    #}
-    
-    #if(length(grep("hectares",rownames(summary(UD1_pHREML)$CI)))>0){
-    #  area.est=area.est/1000000
-    #}
     
     #Get centerpoint
     print("getting centerpoint of home range akde")
@@ -242,17 +147,13 @@ GetAKDE_AC<-function(te1,akde.outdir,pigID,period.str,removal.str){
     ctr.y=UD1_pHREML$r$y[ctr.dim[2]]
     
     #is period during?
-    #if(any(!(is.na(removal.key[removal.key$period==period.str,c(2,3,4)])))){
     if(period.str=="during"){
       #if so
       #Get sf polygon of UD area, 95%
       UDshp.95=as.sf(UD1_pHREML,level.UD=0.95)
       #ask which is not na
-      #removals.apply=which(!(is.na(removal.key[removal.key$week==weeknum,])))
-      
       if(removal.str=="aer"|removal.str=="ctrl"){ #if aer.index, get aerial overlap
         #overlap with fp.chulls
-        
         rem.overlaps.area=c(NA,NA,NA)
       }
       
@@ -317,18 +218,8 @@ GetAKDE_AC<-function(te1,akde.outdir,pigID,period.str,removal.str){
 }
 
 #Loop function for each removal type
-#enter geo.rem, other stuff
 #loop through each pig ID, getting akde for each period
-#geo.rem is subset made above
-#periods is string like 'c("before","after")-- 
-  #doing this way bc dont want during for aer
-
-#geo.rem=geo.trap
-#periods=c("before","during","after")
-#outdir="/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/AKDE_objects_test/"
-#test=FALSE
-#"48449_4A_4A"
-#i=5
+#and saving CTMM model object
 Loop.AKDE<-function(geo.rem,periods,outdir,test){
   geo.rem$datetime<-Neat.Dates.POSIXct(geo.rem$datetime,tz="UTC")
   IDs=unique(geo.rem$animalid)
@@ -372,19 +263,17 @@ Loop.AKDE<-function(geo.rem,periods,outdir,test){
   
 }
 
-#Run looping function for each removal type
+# Run CTMMs for pigs in each removal type --------------------------------------
 
 #Started trap period akde rerun at 1150AM
-outdir="/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/1_Data/AKDE_trap/"
+outdir=file.path(home,"1_Data","Objects","AKDE_trap")
 out.df.trap=Loop.AKDE(geo.trap,c("before","during","after"),outdir,FALSE)
-#saveRDS(out.df.trap,"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/outdf_akde_trap.rds")
+saveRDS(out.df.trap,"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/outdf_akde_trap.rds")
 
-#outdir="/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/AKDE_tox/"
-#out.df.tox=Loop.AKDE(geo.tox,c("before","during","after"),outdir,FALSE)
-#saveRDS(out.df.tox,"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/outdf_akde_tox.rds")
+outdir=file.path(home,"1_Data","Objects","AKDE_tox")
+out.df.tox=Loop.AKDE(geo.tox,c("before","during","after"),outdir,FALSE)
+saveRDS(out.df.tox,"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/outdf_akde_tox.rds")
 
-#outdir="/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/AKDE_aerial/"
-#out.df.aer=Loop.AKDE(geo.aer,c("before","after"),outdir,FALSE)
-#saveRDS(out.df.aer,"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/outdf_akde_aerial.rds")
-
-
+outdir=file.path(home,"1_Data","Objects","AKDE_aer")
+out.df.aer=Loop.AKDE(geo.aer,c("before","after"),outdir,FALSE)
+saveRDS(out.df.aer,"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/outdf_akde_aerial.rds")
