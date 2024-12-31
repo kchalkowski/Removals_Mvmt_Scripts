@@ -3,11 +3,20 @@ home<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NI
 
 # Purpose ----------------------------------------------------------------------
 
+#Format datasets to run NSD calculations for analysis
+
 # In/Out -----------------------------------------------------------------------
+
+#geo.tox, geo.aer, geo.trap inputs
+#geo.aerd.wk, geo.toxd.wk, geo.trapd.wk outputs
 
 # Setup ------------------------------------------------------------------------
 
 #load libraries
+library(amt)
+library(dplyr)
+library(stringr)
+library(sf)
 
 #Set dirs
 input=file.path(home,"1_Data","Input",fsep=.Platform$file.sep)
@@ -24,56 +33,35 @@ for(f in 1:length(func.list)){
   source(func.list[f])
 }
 
-# * Trim incomplete weeks ------------------------------------------------------
+# Trim incomplete weeks ------------------------------------------------------
 
-#Aerial
-aerchk=geo.aer %>% 
-  group_by(animalid,removal.period.akdecalc,week) %>% 
-  dplyr::summarise(n_distinct(jDate)) %>%
-  as.data.frame()
-#remove week 6 and 12, only two days
-geo.aer=geo.aer[geo.aer$week!=12,]
-geo.aer=geo.aer[geo.aer$week!=6,]
+#Make function to trim incomplete weeks
+trimwks=function(geo.rem,mindays){
+  remchk=geo.rem %>% 
+    group_by(animalid,removal.period.akdecalc,week) %>% 
+    dplyr::summarise(minday=n_distinct(jDate)) %>%
+    as.data.frame()
+  
+  remchk2=remchk[remchk$minday<mindays,]
+  
+  for(i in 1:nrow(remchk2)){
+    geo.rem2=geo.rem[!(geo.rem$animalid==remchk2$animalid[i]&
+              geo.rem$removal.period.akdecalc==remchk2$removal.period.akdecalc[i]&
+              geo.rem$week==remchk2$week[i]),]
+    
+  }
+  
+  return(geo.rem2)
+  
+}
 
-#Trap
-trapchk=geo.trap %>% 
-  group_by(animalid,removal.period.akdecalc,week) %>% 
-  dplyr::summarise(n_distinct(jDate)) %>%
-  as.data.frame()
-#remove week 25, only 1 days
-#geo.trapd2=geo.trapd2[geo.trapd2$week!=25,]
-#wks 9 and 26-- all only 1 day
-geo.trap=geo.trap[geo.trap$week!=9,]
-geo.trap=geo.trap[geo.trap$week!=26,]
-
-#each below combo has <6 days
-geo.trap=geo.trap[!(geo.trap$week==18&geo.trap$animalid=="48458_A4_A4"),]
-geo.trap=geo.trap[!(geo.trap$week==18&geo.trap$animalid=="48479_T2_T2"),]
-geo.trap=geo.trap[!(geo.trap$week==20&geo.trap$animalid=="85411_C3_C3"),]
-geo.trap=geo.trap[!(geo.trap$week==24&geo.trap$animalid=="48460_B3_B3"),]
-geo.trap=geo.trap[!(geo.trap$week==21&geo.trap$animalid=="85454_1W_1W"),]
-geo.trap=geo.trap[!(geo.trap$week==22&geo.trap$animalid=="48468_J6_J6"),]
-
-#Tox
-toxchk=geo.tox %>% 
-  group_by(animalid,removal.period.akdecalc,week) %>% 
-  dplyr::summarise(n_distinct(jDate)) %>%
-  as.data.frame()
-
-#very short weeks for 6, 15
-geo.tox=geo.tox[geo.tox$week!=6,]
-geo.tox=geo.tox[geo.tox$week!=15,]
-
-#short weeks for certain IDs for weeks 14/10/9
-geo.tox=geo.tox[!(geo.tox$week==14&geo.tox$animalid=="86063_C6_C6"),]
-geo.tox=geo.tox[!(geo.tox$week==10&geo.tox$animalid=="86070_H2_H2"),]
-geo.tox=geo.tox[!(geo.tox$week==9&geo.tox$animalid=="86071_Y2_Y2"),]
-geo.tox=geo.tox[!(geo.tox$week==9&geo.tox$animalid=="86079_B1_B1"),]
-geo.tox=geo.tox[!(geo.tox$week==9&geo.tox$animalid=="85734_T6_T6"),]
-geo.tox=geo.tox[!(geo.tox$week==9&geo.tox$animalid=="85735_7K_7K"),]
+#Trim incomplete weeks
+geo.aer=trimwks(geo.aer,6)
+geo.trap=trimwks(geo.trap,6)
+geo.tox=trimwks(geo.tox,6)
 
 #View summary
-nrow(geo.tox) #320761
+nrow(geo.tox) #315490
 nrow(geo.trap) #588735
 nrow(geo.aer) #225757
 
@@ -124,9 +112,9 @@ geo.toxd=do.NSDcalcs.georem(geo.tox)
 # Summarize NSD by weekly median -----------------------------------------------
 
 #summarize by week
-geo.aerd.wk=geo.aerd2 %>% group_by(animalid, Removal.Type, removal.period.akdecalc,sex, week) %>% dplyr::summarise(mNSD=median(NSD),mX=mean(X),mY=mean(Y)) %>% as.data.frame()
-geo.trapd.wk=geo.trapd2 %>% group_by(animalid, Removal.Type, removal.period.akdecalc,sex, week) %>% dplyr::summarise(mNSD=median(NSD),mX=mean(X),mY=mean(Y)) %>% as.data.frame()
-geo.toxd.wk=geo.toxd2 %>% group_by(animalid, Removal.Type, removal.period.akdecalc,sex, week) %>% dplyr::summarise(mNSD=median(NSD),mX=mean(X),mY=mean(Y)) %>% as.data.frame()
+geo.aerd.wk=geo.aerd %>% group_by(animalid, Removal.Type, removal.period.akdecalc,sex, week) %>% dplyr::summarise(mNSD=median(NSD),mX=mean(X),mY=mean(Y)) %>% as.data.frame()
+geo.trapd.wk=geo.trapd %>% group_by(animalid, Removal.Type, removal.period.akdecalc,sex, week) %>% dplyr::summarise(mNSD=median(NSD),mX=mean(X),mY=mean(Y)) %>% as.data.frame()
+geo.toxd.wk=geo.toxd %>% group_by(animalid, Removal.Type, removal.period.akdecalc,sex, week) %>% dplyr::summarise(mNSD=median(NSD),mX=mean(X),mY=mean(Y)) %>% as.data.frame()
 
 # Write out data ---------------------------------------------------------------
 
