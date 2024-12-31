@@ -45,6 +45,36 @@ for(f in 1:length(func.list)){
   source(func.list[f])
 }
 
+# Area df object data formatting --------------------------------------------------
+
+#fix units-- sq meters/hectares-- want all to be sq km
+Fix.Area.Units<-function(akrem){
+  akrem[grep("square meters",akrem$akde.hrarea.units),][3:5]=akrem[grep("square meters",akrem$akde.hrarea.units),][3:5]/1e6
+  akrem[grep("hectares",akrem$akde.hrarea.units),][3:5]=akrem[grep("hectares",akrem$akde.hrarea.units),][3:5]/100
+  return(akrem)
+}
+
+aktox=Fix.Area.Units(aktox)
+aktrap=Fix.Area.Units(aktrap)
+akaer=Fix.Area.Units(akaer)
+
+#Remove pigs that were killed during aerial
+killed.aer=akaer[is.na(akaer$area.CI.low),]$animalid
+akaer=akaer[!(akaer$animalid%in%killed.aer),]
+
+#Remove NA 'after' periods for tox-killed pigs
+aktox=aktox[!is.na(aktox$area.CI.low),]
+
+#Relevel periods
+akaer$period<-forcats::fct_relevel(akaer$period,c("before","after"))
+aktrap$period<-forcats::fct_relevel(aktrap$period,c("before","during","after"))
+aktox$period<-forcats::fct_relevel(aktox$period,c("before","after"))
+
+#Relevel removal types
+akaer$Removal.Type<-forcats::fct_relevel(akaer$Removal.Type,c("ctrl","aer"))
+aktrap$Removal.Type<-forcats::fct_relevel(aktrap$Removal.Type,c("ctrl","trap"))
+aktox$Removal.Type<-forcats::fct_relevel(aktox$Removal.Type,c("ctrl","tox"))
+
 # Check aerial data spatial autocorrelation -----------------------------------
 {
 res=glmmTMB(area.est~(1|animalid)+Removal.Type*period,data=akaer,family=Gamma(link="log"))
