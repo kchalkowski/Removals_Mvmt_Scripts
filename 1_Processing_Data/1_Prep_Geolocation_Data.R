@@ -1,17 +1,4 @@
 
-#Need revise this a bit more
-#Pipeline in proc data folder:
-  #1_Prep_Geolocation_Data
-    #-does removal designations, periods, week splits
-    #-remove week trimming from this script!
-  #2_Get_Period_AKDEs
-    #-trims pig period data as needed
-    #-fits ctmm for each pig/period/removal
-    #-outputs area df
-
-#Next steps for tomorrow:
-#3-finish cleaning up 4_Preanalysisformatting (should just be NSD calcs, move to NSD folder)
-
 #set home dir of pipeline
 home<-"/Users/kayleigh.chalkowski/OneDrive - USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
 
