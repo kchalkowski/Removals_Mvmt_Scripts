@@ -296,6 +296,10 @@ not.selected=c(not.selected,"48476_2_4Y_4Y","85401_2_U_U","85440_E2_E2")
 tox.pig.IDs=tox.pig.IDs[tox.pig.IDs!="86070_H2_H2"]
 not.selected=c(not.selected,"86070_H2_H2")
 
+#Note:
+  #two additional pigs removed from tox dataset later on:
+  #85411_C3_C3 and 86075_Y5_Y5, because was not range resident res behavior (therefore could not get akde hr estimate)
+
 #18 pigs removed in total
 
 # * Link designations to geolocs -----------------------------------------------
