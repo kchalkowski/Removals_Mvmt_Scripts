@@ -15,9 +15,14 @@ library(move)
 
 akde_dir <- "./1_Data/Objects/"
 ctmm_dir <- "./1_Data/Objects/ctmm_Predictions/"
+objdir=file.path(home,"1_Data","Objects",fsep=.Platform$file.sep)
 
 #load data -------
-georem <- read.csv("./1_Data/Objects/georemtyp_period.csv")
+#georem <- read.csv("./1_Data/Objects/georemtyp_period.csv")
+geo.aer<-readRDS(file.path(objdir,"geoaer.rds"))
+geo.tox<-readRDS(file.path(objdir,"geotox.rds"))
+geo.trap<-readRDS(file.path(objdir,"geotrap.rds"))
+#####^ needs be separated geo.rem, since new files contain already split periods and assigned weeks
 
 periods <- unique(georem$removal.period.akdecalc)
 rem_typ <- unique(georem$Removal.Type)[-1] #no control group
