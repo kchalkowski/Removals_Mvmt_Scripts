@@ -16,7 +16,6 @@ homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
 # homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
 
 ctmm_dir <- paste0(homedir,"./1_Data/Objects/ctmm_Predictions/")
-out_dir <- paste0(homedir,"./1_Data/Objects/")
 objdir=file.path(homedir,"1_Data","Objects",fsep=.Platform$file.sep)
 
 # georem <- read.csv("./1_Data/Objects/geo_remtyp_period.csv")
@@ -194,15 +193,15 @@ pig_speed_all <- do.call("rbind.data.frame",pig_speed_per_rem)
 pig_dist_all <- pig_dist_all %>% filter(!is.na(rem_typ))
 pig_speed_all <- pig_speed_all %>% filter(!is.na(rem_typ))
 
-# saveRDS(pig_dist_all,file=paste0(out_dir,"daily_distance_nifa.rds"))
-# saveRDS(pig_speed_all,file=paste0(out_dir,"hourly_speed_nifa.rds"))
+# saveRDS(pig_dist_all,file=paste0(objdir,"/daily_distance_nifa.rds"))
+# saveRDS(pig_speed_all,file=paste0(objdir,"/hourly_speed_nifa.rds"))
 
-# pig_dist_all <- readRDS(paste0(out_dir,"daily_distance_nifa.rds"))
-# pig_speed_all <- readRDS(paste0(out_dir,"hourly_speed_nifa.rds"))
+# pig_dist_all <- readRDS(paste0(objdir,"/daily_distance_nifa.rds"))
+# pig_speed_all <- readRDS(paste0(objdir,"/hourly_speed_nifa.rds"))
 
 # weekly summaries-----------------
 ## distance ----------------
-# pig_dist_all <- readRDS(paste0(out_dir,"daily_distance_nifa.rds"))
+# pig_dist_all <- readRDS(paste0(objdir,"/daily_distance_nifa.rds"))
 
 #add controls in 
 ctrl_ids <- geo.all %>% filter(Removal.Type=="ctrl") %>%
@@ -226,7 +225,7 @@ pig_dist_wk <- pig_dist_all %>%
          mX=mn_x,
          mY=mn_y)
 
-saveRDS(pig_dist_wk,paste0(out_dir,"pig_weekly_distance_ctmm.rds"))
+saveRDS(pig_dist_wk,paste0(objdir,"/pig_weekly_distance_ctmm.rds"))
 
 #entire treatment group per week -----------
 pig_dist_wk_trt <- pig_dist_wk %>% 
@@ -240,7 +239,7 @@ pig_dist_wk_trt <- pig_dist_wk %>%
             max=max(weekly_dist_km))
 
 ## speed -------------------------
-# pig_speed_all <- readRDS(paste0(out_dir,"hourly_speed_nifa.rds"))
+# pig_speed_all <- readRDS(paste0(objdir,"/hourly_speed_nifa.rds"))
 
 pig_speed_all$rem_typ[pig_speed_all$animalid%in%ctrl_ids$animalid] <- "ctrl"
 
@@ -258,5 +257,5 @@ pig_speed_wk <- pig_speed_all %>%
   rename(Removal.Type=rem_typ,
          removal.period.akdecalc=period)
 
-saveRDS(pig_speed_wk,paste0(out_dir,"pig_weekly_speed_ctmm.rds"))
+saveRDS(pig_speed_wk,paste0(objdir,"/pig_weekly_speed_ctmm.rds"))
 
