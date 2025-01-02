@@ -64,7 +64,7 @@ pig_dist_per_rem <- pig_speed_per_rem <- list()
 # k<-1
 # j<-2
 geo.aer %>% filter(animalid==pig_id[j]) %>% select(date_only) %>% reframe(range(date_only))
-pig_id[j]
+
 for(i in 1:length(rem_typ)){
   
   pig_id <- list.files(paste0(ctmm_dir,rem_typ[i]))
@@ -191,21 +191,26 @@ for(i in 1:length(rem_typ)){
 pig_dist_all <- do.call("rbind.data.frame",pig_dist_per_rem)           
 pig_speed_all <- do.call("rbind.data.frame",pig_speed_per_rem)   
 
+pig_dist_all <- pig_dist_all %>% filter(!is.na(rem_typ))
+pig_speed_all <- pig_speed_all %>% filter(!is.na(rem_typ))
+
 # saveRDS(pig_dist_all,file=paste0(out_dir,"daily_distance_nifa.rds"))
 # saveRDS(pig_speed_all,file=paste0(out_dir,"hourly_speed_nifa.rds"))
 
+# pig_dist_all <- readRDS(paste0(out_dir,"daily_distance_nifa.rds"))
+# pig_speed_all <- readRDS(paste0(out_dir,"hourly_speed_nifa.rds"))
 
 # weekly summaries-----------------
 ## distance ----------------
 # pig_dist_all <- readRDS(paste0(out_dir,"daily_distance_nifa.rds"))
 
 #add controls in 
-ctrl_ids <- georem %>% filter(Removal.Type=="ctrl") %>%
+ctrl_ids <- geo.all %>% filter(Removal.Type=="ctrl") %>%
   reframe(animalid=unique(animalid))
 pig_dist_all$rem_typ[pig_dist_all$animalid%in%ctrl_ids$animalid] <- "ctrl"
 
 #add sex
-pig_dist_all <- pig_dist_all %>% left_join(georem %>% select(sex,animalid) %>% distinct())
+pig_dist_all <- pig_dist_all %>% left_join(geo.all %>% select(sex,animalid) %>% distinct())
 
 #per individual per week
 pig_dist_wk <- pig_dist_all %>% 
@@ -240,7 +245,7 @@ pig_dist_wk_trt <- pig_dist_wk %>%
 pig_speed_all$rem_typ[pig_speed_all$animalid%in%ctrl_ids$animalid] <- "ctrl"
 
 #add sex
-pig_speed_all <- pig_speed_all %>% left_join(georem %>% select(sex,animalid) %>% distinct())
+pig_speed_all <- pig_speed_all %>% left_join(geo.all %>% select(sex,animalid) %>% distinct())
 
 #per individual per week
 pig_speed_wk <- pig_speed_all %>% 
