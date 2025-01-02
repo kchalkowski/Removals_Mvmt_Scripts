@@ -2,34 +2,24 @@
 home<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
 
 # Purpose ----------------------------------------------------------------------
-#The purpose of this script is to format outputs to use for analysis in removals
-#responses pipeline
+#The purpose of this script is to formulate and run NSD glmms
 
-#1. AKDE output formatting
-#relevel, remove missing periods, etc.
-#2. Geolocation data formatting
-#General tidying
-#set periods
-#3. Calculate NSD
-#4. Summarize weekly median NSD
+# Process ----------------------------------------------------------------------
+
+#Check for temporal autocorr
+#Check for spatial autocorr
+#GLMMs
 
 # In/Out -----------------------------------------------------------------------
 
-#for NSD calcs:
-#geo_remtype.csv --> geo_aerd_wk.rds, geo_toxd_wk.rds, geo_trapd_wk.rds
-
-#for AKDE calcs
-#outdf_akde_aer_corrected.rds --> outdf_akde_aer_corrected_f.rds
-#outdf_akde_tox_corrected.rds --> outdf_akde_tox_corrected_f.rds
-#outdf_akde_trap_corrected.rds --> outdf_akde_trap_corrected_f.rds
+#inputs: geo_aerd_wk.rds, geo_toxd_wk.rds, geo_trapd_wk.rds
 
 # Setup ------------------------------------------------------------------------
 
 #Set dirs
 input=file.path(home,"1_Data","Input",fsep=.Platform$file.sep)
 objdir=file.path(home,"1_Data","Objects",fsep=.Platform$file.sep)
-
-
+outdir=file.path(home,"3_Output",fsep=.Platform$file.sep)
 
 #load libraries
   library(ctmm)
@@ -44,24 +34,16 @@ objdir=file.path(home,"1_Data","Objects",fsep=.Platform$file.sep)
   library(ggeffects)
   library(hrbrthemes)
   library(glmmTMB)
+  library(DHARMa)
+  library(sdmTMB)
 
 #Read in data to use for NSD analysis:
-geo.aerd.wk=readRDS(file.path(objdir,"geo_aerd_wk.rds",fsep=.Platform$file.sep))
-geo.trapd.wk=readRDS(file.path(objdir,"geo_trapd_wk.rds",fsep=.Platform$file.sep))
-geo.toxd.wk=readRDS(file.path(objdir,"geo_toxd_wk.rds",fsep=.Platform$file.sep))
-
-#Relevel periods
-geo.aerd.wk$removal.period.akdecalc<-fct_relevel(geo.aerd.wk$removal.period.akdecalc,c("before","during"))
-geo.trapd.wk$removal.period.akdecalc<-fct_relevel(geo.trapd.wk$removal.period.akdecalc,c("before","during"))
-geo.toxd.wk$removal.period.akdecalc<-fct_relevel(geo.toxd.wk$removal.period.akdecalc,c("before","during"))
-
-#Relevel removal types
-geo.aerd.wk$Removal.Type<-fct_relevel(geo.aerd.wk$Removal.Type,"ctrl")
-geo.trapd.wk$Removal.Type<-fct_relevel(geo.trapd.wk$Removal.Type,"ctrl")
-geo.toxd.wk$Removal.Type<-fct_relevel(geo.toxd.wk$Removal.Type,"ctrl")
+geo.aerd.wk=readRDS(file.path(objdir,"NSDgeoaer.rds",fsep=.Platform$file.sep))
+geo.trapd.wk=readRDS(file.path(objdir,"NSDgeotrap.rds",fsep=.Platform$file.sep))
+geo.toxd.wk=readRDS(file.path(objdir,"NSDgeotox.rds",fsep=.Platform$file.sep))
 
 # Temporal (weekly) autocorrelation checking -----------------------------------
-{
+
 #Functions
 Do.PACF<-function(ys,len){
   
@@ -88,6 +70,8 @@ Do.PACF<-function(ys,len){
   return(PACF.df)
 }
 
+# * Check partial autocorrelation plots ----------------------------------------
+
 #Requires PACF.df, a dataframe with two cols
 #lag=intervals to plot along, starting with zero through length of the data
 #PACF is the PACF results
@@ -100,11 +84,7 @@ Plot.PACF<-function(PACF.df){
     theme_ipsum()
 }
 
-outdir="/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Exploratory_Outputs/PACF_animalid_plots_akde_displacement/"
-geo.remd.wk=geo.aerd.wk
-removal.str="aer"
 Do.PACF.Exploratory<-function(geo.remd.wk,outdir,removal.str){
-
 #Want a PACF for each animalid.... 
 #subset to only needed cols
 #animalid, week, responses
@@ -147,35 +127,17 @@ for(i in 1:length(IDs)){
 
 }
 
-Do.PACF.Exploratory(geo.aerd.wk,outdir,"aer")
-Do.PACF.Exploratory(geo.toxd.wk,outdir,"tox")
-Do.PACF.Exploratory(geo.trapd.wk,outdir,"trap")
+outdir.pacf=file.path(outdir,"Exploratory_Outputs","PACF_animalid_plots_akde_displacement")
+Do.PACF.Exploratory(geo.aerd.wk,outdir.pacf,"aer")
+Do.PACF.Exploratory(geo.toxd.wk,outdir.pacf,"tox")
+Do.PACF.Exploratory(geo.trapd.wk,outdir.pacf,"trap")
 
 #Looked at plots, does appear to be some first-order autocorrelation in displacement between weeks
 #Try adding autocorrelation structure to model, see if residuals become less autocorrelated across weeks
-#library(fitdistrplus)
-#Check histos to determine appropriate model structures
-outdir="/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Exploratory_Outputs/weekly_disp_hist/"
-Do.Displacement.Histos<-function(wak2,outdir,removal.str){
-  IDs=unique(wak2$animalid)
-for(i in 1:length(unique(wak2$animalid))){
-ggplot(data=wak2[wak2$animalid==unique(wak2$animalid)[i],],aes(x=mNSD))+
-    geom_histogram()
-  if(!exists(paste0(outdir,removal.str,"/"))){dir.create(paste0(outdir,removal.str,"/"))}
-  filename=paste0(paste0(outdir,removal.str,"/"),IDs[i],".png")
-  ggsave(filename,bg="white")
-}
-}
 
-Do.Displacement.Histos(geo.aerd.wk,outdir,"aer")
-Do.Displacement.Histos(geo.toxd.wk,outdir,"tox")
-Do.Displacement.Histos(geo.trapd.wk,outdir,"trap")
+# * Check residual plots -------------------------------------------------------
 
 #Make function to run different autocorrelation structures, check residual plots
-
-removal.str="aer"
-outdir="/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Exploratory_Outputs/"
-
 Check.Week.Autocorr<-function(geo.aerd.wk,outdir,removal.str){
   
   geo.aerd.wk$weekfac=as.factor(geo.aerd.wk$week)
@@ -205,89 +167,136 @@ Check.Week.Autocorr<-function(geo.aerd.wk,outdir,removal.str){
   
 }
 
-Check.Week.Autocorr(geo.aerd.wk,outdir,"aer")
-Check.Week.Autocorr(geo.trapd.wk,outdir,"trap")
-Check.Week.Autocorr(geo.toxd.wk,outdir,"tox")
+outdir.autocor=file.path(outdir,"Exploratory_Outputs")
+Check.Week.Autocorr(geo.aerd.wk,outdir.autocor,"aer")
+Check.Week.Autocorr(geo.trapd.wk,outdir.autocor,"trap")
+Check.Week.Autocorr(geo.toxd.wk,outdir.autocor,"tox")
 
-#Including autocor structure does seem to reduce autocor of residuals considerably.
+#Try models with ar1 structure
 res.ac.aer=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid), data=geo.aerd.wk,family=Gamma(link=log))
 res.ac.trap=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid), data=geo.trapd.wk,family=Gamma(link=log))
 res.ac.tox=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid), data=geo.toxd.wk,family=Gamma(link=log))
 
-}
+#Test models with ar1 structure
+simulationOutput <- simulateResiduals(fittedModel = res.ac.aer, plot = F)
+so2=recalculateResiduals(simulationOutput, group = geo.aerd.wk$animalid)
+plot(so2$simulatedResponse)
+descdist(so2$fittedResiduals)
+DHARMa::testDispersion(so2)
+plot(so2)
+
+simulationOutput <- simulateResiduals(fittedModel = res.ac.trap, plot = F)
+so2=recalculateResiduals(simulationOutput, group = geo.trapd.wk$animalid)
+plot(so2$simulatedResponse)
+descdist(so2$fittedResiduals)
+DHARMa::testDispersion(so2)
+plot(so2)
+
+simulationOutput <- simulateResiduals(fittedModel = res.ac.tox, plot = F)
+so2=recalculateResiduals(simulationOutput, group = geo.toxd.wk$animalid)
+plot(so2$simulatedResponse)
+descdist(so2$fittedResiduals)
+DHARMa::testDispersion(so2)
+plot(so2)
+
+#Including autocor structure does seem to reduce autocor of residuals considerably.
 
 # Check distribution fits ------------------------------------------------------
-{
-  simulationOutput <- simulateResiduals(fittedModel = res.ac.aer, plot = F)
-  so2=recalculateResiduals(simulationOutput, group = geo.aerd.wk$animalid)
-  plot(so2$simulatedResponse)
-  descdist(so2$fittedResiduals)
-  DHARMa::testDispersion(so2)
-  plot(so2)
-  
-  simulationOutput <- simulateResiduals(fittedModel = res.ac.trap, plot = F)
-  so2=recalculateResiduals(simulationOutput, group = geo.trapd.wk$animalid)
-  plot(so2$simulatedResponse)
-  descdist(so2$fittedResiduals)
-  DHARMa::testDispersion(so2)
-  plot(so2)
-  
-  simulationOutput <- simulateResiduals(fittedModel = res.ac.tox, plot = F)
-  so2=recalculateResiduals(simulationOutput, group = geo.toxd.wk$animalid)
-  plot(so2$simulatedResponse)
-  descdist(so2$fittedResiduals)
-  DHARMa::testDispersion(so2)
-  plot(so2)
+
+# * Check histograms ----------------------------------------
+
+#Check histos to determine appropriate model structures
+Do.Displacement.Histos<-function(wak2,outdir.hist,removal.str){
+  IDs=unique(wak2$animalid)
+  for(i in 1:length(unique(wak2$animalid))){
+    ggplot(data=wak2[wak2$animalid==unique(wak2$animalid)[i],],aes(x=mNSD))+
+      geom_histogram()
+    if(!exists(paste0(outdir,removal.str,"/"))){dir.create(paste0(outdir,removal.str,"/"))}
+    filename=paste0(paste0(outdir,removal.str,"/"),IDs[i],".png")
+    ggsave(filename,bg="white")
+  }
 }
 
-# Check for spatial autocorrelation --------------------------------------------
-{
-  #Within each week, across pigs, do we see spatial autocorrelation of displacement values?
-  res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.aerd.wk,family=Gamma(link=log))
-  #Test for spatial autocorrelation with dharma package
-  res <- simulateResiduals(res1.ac.sac)
-  groupLocations = aggregate(geo.aerd.wk[, 7:8], list(as.factor(geo.aerd.wk$animalid)), mean)
-  res2 = recalculateResiduals(res, group = as.factor(geo.aerd.wk$animalid), rotation="estimated")
-  testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
-  
-  #No spatial autocorr
-  res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.trapd.wk,family=Gamma(link=log))
-  #Test for spatial autocorrelation with dharma package
-  res <- simulateResiduals(res1.ac.sac)
-  groupLocations = aggregate(geo.trapd.wk[, 7:8], list(as.factor(geo.trapd.wk$animalid)), mean)
-  res2 = recalculateResiduals(res, group = as.factor(geo.trapd.wk$animalid), rotation="estimated")
-  testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
-  #no spatial autocorrelation
-  
-  res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.toxd.wk,family=Gamma(link=log))
-  #Test for spatial autocorrelation with dharma package
-  res <- simulateResiduals(res1.ac.sac)
-  groupLocations = aggregate(geo.toxd.wk[, 7:8], list(as.factor(geo.toxd.wk$animalid)), mean)
-  res2 = recalculateResiduals(res, group = as.factor(geo.toxd.wk$animalid), rotation="estimated")
-  testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
-  #spatial autocorrelation
+outdir.hist=file.path(outdir,"Exploratory_Outputs","weekly_disp_hist")
+Do.Displacement.Histos(geo.aerd.wk,outdir.hist,"aer")
+Do.Displacement.Histos(geo.toxd.wk,outdir.hist,"tox")
+Do.Displacement.Histos(geo.trapd.wk,outdir.hist,"trap")
 
-  #####Get which IDs died in aer/tox
-  grps=geo.toxd.wk %>% group_by(animalid) %>% dplyr::summarise(n=unique(removal.period.akdecalc))
-  grps$vals=1
-  grps=tidyr::pivot_wider(grps,names_from=n,values_from=vals)
-  died.tox=grps[which(is.na(grps$after)),]$animalid
-  #Separate data by who died during tox treatment
-  geo.toxd.wk$died_tox=NA
-  geo.toxd.wk[geo.toxd.wk$animalid%in%died.tox,]$died_tox=1
-  geo.toxd.wk[is.na(geo.toxd.wk$died_tox),]$died_tox<-0
-  geo.toxd.wk$died_tox<-as.factor(geo.toxd.wk$died_tox)
+# Check for spatial autocorrelation --------------------------------------------
+
+#Within each week, across pigs, do we see spatial autocorrelation of displacement values?
   
-  res1.ac.sac=glmmTMB(mNSD ~ sex + ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.toxd.wk,family=Gamma(link=log))
-  #Test for spatial autocorrelation with dharma package
-  res <- simulateResiduals(res1.ac.sac)
-  groupLocations = aggregate(geo.toxd.wk[, c(which(colnames(geo.toxd.wk)=="mX"),which(colnames(geo.toxd.wk)=="mY"))], list(as.factor(geo.toxd.wk$animalid)), mean)
-  res2 = recalculateResiduals(res, group = as.factor(geo.toxd.wk$animalid), rotation="estimated")
-  testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
-  #spatial autocorrelation
+# * Aerial spatial autocorr ----------------------------------------------------
+
+res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.aerd.wk,family=Gamma(link=log))
   
-  #spatial autocor goes away when either include died_tox or sex as a var
-} 
+#Test for spatial autocorrelation with dharma package
+res <- simulateResiduals(res1.ac.sac)
+groupLocations = aggregate(geo.aerd.wk[, 7:8], list(as.factor(geo.aerd.wk$animalid)), mean)
+res2 = recalculateResiduals(res, group = as.factor(geo.aerd.wk$animalid), rotation="estimated")
+testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
+#Is spatial autocorr
+  
+# * Trap spatial autocorr ----------------------------------------------------
+
+#Run model
+res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.trapd.wk,family=Gamma(link=log))
+  
+#Test for spatial autocorrelation with dharma package
+res <- simulateResiduals(res1.ac.sac)
+groupLocations = aggregate(geo.trapd.wk[, 7:8], list(as.factor(geo.trapd.wk$animalid)), mean)
+res2 = recalculateResiduals(res, group = as.factor(geo.trapd.wk$animalid), rotation="estimated")
+testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
+#is spatial autocorrelation for trap
+
+#Correct for spatial autocorrelation, try gaussian autocor structure
+#use glmmTMB spatiotemporal 
+geo.trapd.wk$X=geo.trapd.wk$mX/1000
+geo.trapd.wk$Y=geo.trapd.wk$mY/1000
+geo.trapd.wk$animalid<-factor(geo.trapd.wk$animalid)
+mesh <- make_mesh(geo.trapd.wk, xy_cols = c("X", "Y"), cutoff = 1)
+fit_temporal <- sdmTMB(
+  mNSD ~ Removal.Type*removal.period.akdecalc + (1|animalid), 
+  data = geo.trapd.wk, 
+  mesh = mesh,
+  time = "week",
+  family = Gamma(link=log), 
+  spatial = "off", 
+  spatiotemporal = "ar1"
+)
+fit_spatiotemporal <- sdmTMB(
+  mNSD ~ Removal.Type*removal.period.akdecalc + (1|animalid), 
+  data = geo.trapd.wk, 
+  mesh = mesh,
+  time = "week",
+  family = Gamma(link=log), 
+  spatial = "on", 
+  spatiotemporal = "ar1"
+)
+
+#test spatcor after sdmTMB below
+res2temp <- simulate(fit_temporal, nsim = 250, type = "mle-mvn")
+r_pois_temp <- dharma_residuals(res2temp, fit_temporal, return_DHARMa = TRUE,rotation="estimated")
+DHARMa::testSpatialAutocorrelation(r_pois_temp, x = geo.trapd.wk$X, y = geo.trapd.wk$Y)
+#p=0.0591 (was significant in non-sdmTMB version)
+
+res2 <- simulate(fit_spatiotemporal, nsim = 250, type = "mle-mvn")
+r_pois <- dharma_residuals(res2, fit_spatiotemporal, return_DHARMa = TRUE,rotation="estimated")
+DHARMa::testSpatialAutocorrelation(r_pois, x = geo.trapd.wk$X, y = geo.trapd.wk$Y)
+#p=0.1176 current mesh (cutoff=1) removes spatial autocorrelation in model
+
+# * Tox spatial autocorr ----------------------------------------------------
+
+#Run model
+res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.toxd.wk,family=Gamma(link=log))
+
+#Test for spatial autocorrelation with dharma package
+res <- simulateResiduals(res1.ac.sac)
+groupLocations = aggregate(geo.toxd.wk[, 7:8], list(as.factor(geo.toxd.wk$animalid)), mean)
+res2 = recalculateResiduals(res, group = as.factor(geo.toxd.wk$animalid), rotation="estimated")
+testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
+#no spatial autocorrelation
+
 
 # Run GLMMs --------------------------------------------------------------------
 
