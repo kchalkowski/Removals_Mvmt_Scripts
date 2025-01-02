@@ -16,7 +16,9 @@
 library(tidyverse)
 library(snow)
 
-georem <- read.csv("./1_Data/Objects/geo_remtyp_period.csv")
+homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
+
+georem <- read.csv(paste0(homedir,"/1_Data/Objects/geo_remtyp_period.csv"))
 
 georem$date_only <- as.Date(georem$date_only)
 georem$datetime <- as.POSIXct(georem$datetime,format="%Y-%m-%d %H:%M:%S", tz="UTC")
