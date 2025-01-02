@@ -330,7 +330,7 @@ testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
 geo.trapd.wk$X=round(geo.trapd.wk$mX/500)
 geo.trapd.wk$Y=round(geo.trapd.wk$mY/500)
 geo.trapd.wk$animalid<-factor(geo.trapd.wk$animalid)
-geo.trapd.wk$pos <- numFactor(geo.trapd.wk$X, geo.trapd.wk$X)
+geo.trapd.wk$pos <- numFactor(geo.trapd.wk$X, geo.trapd.wk$Y)
 res.spat=glmmTMB(mNSD~Removal.Type*removal.period.akdecalc+
                    exp(pos + 0 | animalid)+ar1(as.factor(week) + 0 | animalid),
                  data=geo.trapd.wk,
@@ -357,51 +357,53 @@ res2 = recalculateResiduals(res, group = as.factor(geo.trapd.wk$animalid), rotat
 testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
 #is spatial autocorrelation for trap with sex interaction, p=0.0006
 
-#Correct for spatial autocorrelation
-geo.trapd.wk$X=geo.trapd.wk$mX/1000
-geo.trapd.wk$Y=geo.trapd.wk$mY/1000
+geo.trapd.wk$X=round(geo.trapd.wk$mX/500)
+geo.trapd.wk$Y=round(geo.trapd.wk$mY/500)
 geo.trapd.wk$animalid<-factor(geo.trapd.wk$animalid)
-mesh <- make_mesh(geo.trapd.wk, xy_cols = c("X", "Y"), cutoff = 0.5)
-fit_temporal <- sdmTMB(
-  mNSD ~ Removal.Type*removal.period.akdecalc*sex + (1|animalid), 
-  data = geo.trapd.wk, 
-  mesh = mesh,
-  time = "week",
-  family = Gamma(link=log), 
-  spatial = "off", 
-  spatiotemporal = "ar1"
-)
-fit_temporal2 <- sdmTMB(
-  mNSD ~ Removal.Type*removal.period.akdecalc*sex + (1|animalid), 
-  data = geo.trapd.wk, 
-  mesh = mesh,
-  time = "week",
-  time_varying=~as.factor(week) + 0 | animalid,
-  time_varying_type="ar1",
-  family = Gamma(link=log), 
-  spatial = "off"
-)
-fit_spatiotemporal <- sdmTMB(
-  mNSD ~ Removal.Type*removal.period.akdecalc*sex + (1|animalid), 
-  data = geo.trapd.wk, 
-  mesh = mesh,
-  time = "week",
-  family = Gamma(link=log), 
-  spatial = "on", 
-  spatiotemporal = "ar1"
-)
+geo.trapd.wk$pos <- numFactor(geo.trapd.wk$X, geo.trapd.wk$Y)
+res.spat=glmmTMB(mNSD~Removal.Type*removal.period.akdecalc*sex+
+                   exp(pos + 0 | animalid)+ar1(as.factor(week) + 0 | animalid),
+                 data=geo.trapd.wk,
+                 family=Gamma(link="log"),
+                 verbose=TRUE)
 
-#test spatcor after sdmTMB
-res2temp <- simulate(fit_temporal2, nsim = 250, type = "mle-mvn")
-r_pois_temp <- dharma_residuals(res2temp, fit_temporal2, return_DHARMa = TRUE,rotation="estimated")
-DHARMa::testSpatialAutocorrelation(r_pois_temp, x = geo.trapd.wk$X, y = geo.trapd.wk$Y)
-#p=
+res <- simulateResiduals(res.spat) #mle-mvn?
+groupLocations = aggregate(geo.trapd.wk[, 7:8], list(as.factor(geo.trapd.wk$animalid)), mean)
+res2 = recalculateResiduals(res, group = as.factor(geo.trapd.wk$animalid), rotation="estimated")
+testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
+#better, p=0.01, still autocorr
 
-res2 <- simulate(fit_spatiotemporal, nsim = 250, type = "mle-mvn")
-r_pois <- dharma_residuals(res2, fit_spatiotemporal, return_DHARMa = TRUE,rotation="estimated")
-DHARMa::testSpatialAutocorrelation(r_pois, x = geo.trapd.wk$X, y = geo.trapd.wk$Y)
-#p=
+geo.trapd.wk$X=round(geo.trapd.wk$mX/250)
+geo.trapd.wk$Y=round(geo.trapd.wk$mY/250)
+geo.trapd.wk$animalid<-factor(geo.trapd.wk$animalid)
+geo.trapd.wk$pos <- numFactor(geo.trapd.wk$X, geo.trapd.wk$Y)
+res.spat=glmmTMB(mNSD~Removal.Type*removal.period.akdecalc*sex+
+                   exp(pos + 0 | animalid)+ar1(as.factor(week) + 0 | animalid),
+                 data=geo.trapd.wk,
+                 family=Gamma(link="log"),
+                 verbose=TRUE)
 
+res <- simulateResiduals(res.spat) 
+groupLocations = aggregate(geo.trapd.wk[, 7:8], list(as.factor(geo.trapd.wk$animalid)), mean)
+res2 = recalculateResiduals(res, group = as.factor(geo.trapd.wk$animalid), rotation="estimated")
+testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
+#worse, p=0.001
+
+geo.trapd.wk$X=round(geo.trapd.wk$mX/500)
+geo.trapd.wk$Y=round(geo.trapd.wk$mY/500)
+geo.trapd.wk$animalid<-factor(geo.trapd.wk$animalid)
+geo.trapd.wk$pos <- numFactor(geo.trapd.wk$X, geo.trapd.wk$Y)
+res.spat=glmmTMB(mNSD~Removal.Type*removal.period.akdecalc*sex+
+                   exp(pos + 0 | animalid)+ar1(as.factor(week) + 0 | animalid),
+                 data=geo.trapd.wk,
+                 family=Gamma(link="log"),
+                 verbose=TRUE)
+
+res <- simulateResiduals(res.spat) 
+groupLocations = aggregate(geo.trapd.wk[, 7:8], list(as.factor(geo.trapd.wk$animalid)), mean)
+res2 = recalculateResiduals(res, group = as.factor(geo.trapd.wk$animalid), rotation="estimated")
+testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
+#better, p=0.01384
 
 # * Tox spatial autocorr ----------------------------------------------------
 
