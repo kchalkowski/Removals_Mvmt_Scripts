@@ -10,7 +10,7 @@ library(ctmm)
 library(tidyverse)
 library(move)
 
-homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
+# homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
 # homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
 
 akde_dir <- paste0(homedir,"/1_Data/Objects/")
@@ -25,7 +25,7 @@ geo.trap<-readRDS(file.path(objdir,"geotrap.rds"))
 #####^ needs be separated geo.rem, since new files contain already split periods and assigned weeks
 
 periods <- unique(geo.tox$removal.period.akdecalc)
-rem_typ <- unique(geo.tox$Removal.Type)[-1] #no control group
+rem_typ <- c("aer","tox","trap")
 
 #predict one-minute trajectories using original data
 # per removal type and treatment period
@@ -53,9 +53,10 @@ for(k in 1:length(rem_typ)){ #removal type loop
       if(!(rem_typ[k]=="aerial" & j==2)){ #no during for aerial ops
         
         #skip missing AKDE files
-        # if(file.exists(paste0(akde_dir,"AKDE_",rem_typ[k],"/",
-        #                       pig_files[i],"/",pig_files[i],"_",
-        #                       periods[j],".rds")) & 
+        if(file.exists(paste0(akde_dir,"AKDE_",rem_typ[k],"/",
+                              pig_files[i],"/",pig_files[i],"_",
+                              periods[j],".rds"))
+        # & 
         #    #skip already made predictions
         #    !file.exists(paste0(ctmm_dir,
         #           rem_typ[k],"/",
@@ -63,7 +64,7 @@ for(k in 1:length(rem_typ)){ #removal type loop
         #           pig_files[i],"_",
         #           periods[j],
         #           "_one_min_pred.rds"))
-        #    ){
+           ){
           #grab pig ctmm model
           pig_mod[[i]] <- readRDS(paste0(akde_dir,"AKDE_",rem_typ[k],"/",
                                          pig_files[i],"/",pig_files[i],"_",
@@ -119,7 +120,7 @@ for(k in 1:length(rem_typ)){ #removal type loop
             
             #save to directory
             saveRDS(pig_pred[[i]],
-                    file=paste0(ctmm_dir/
+                    file=paste0(ctmm_dir,
                                 rem_typ[k],"/",
                                 pig_name,"/",
                                 pig_name,"_",
@@ -127,7 +128,7 @@ for(k in 1:length(rem_typ)){ #removal type loop
                                 "_one_min_pred.rds")
             )
           }
-        # } #skip missing AKDEs
+        } #skip missing AKDEs
       }
     }
   }
