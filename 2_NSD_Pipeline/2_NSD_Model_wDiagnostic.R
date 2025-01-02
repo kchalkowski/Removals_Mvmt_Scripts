@@ -235,7 +235,7 @@ res <- simulateResiduals(res1.ac.sac)
 groupLocations = aggregate(geo.aerd.wk[, 7:8], list(as.factor(geo.aerd.wk$animalid)), mean)
 res2 = recalculateResiduals(res, group = as.factor(geo.aerd.wk$animalid), rotation="estimated")
 testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
-#No spatial autocorr
+#Is spatial autocorr
   
 # * Trap spatial autocorr ----------------------------------------------------
 
@@ -254,27 +254,36 @@ testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
 geo.trapd.wk$X=geo.trapd.wk$mX/1000
 geo.trapd.wk$Y=geo.trapd.wk$mY/1000
 geo.trapd.wk$animalid<-factor(geo.trapd.wk$animalid)
-mesh <- make_mesh(geo.trapd.wk, xy_cols = c("mX", "mY"), cutoff = 200)
+mesh <- make_mesh(geo.trapd.wk, xy_cols = c("X", "Y"), cutoff = 1)
+fit_temporal <- sdmTMB(
+  mNSD ~ Removal.Type*removal.period.akdecalc + (1|animalid), 
+  data = geo.trapd.wk, 
+  mesh = mesh,
+  time = "week",
+  family = Gamma(link=log), 
+  spatial = "off", 
+  spatiotemporal = "ar1"
+)
 fit_spatiotemporal <- sdmTMB(
   mNSD ~ Removal.Type*removal.period.akdecalc + (1|animalid), 
   data = geo.trapd.wk, 
   mesh = mesh,
-  #time = "week",
-  family = gaussian(link = "identity"), 
+  time = "week",
+  family = Gamma(link=log), 
   spatial = "on", 
-  #spatiotemporal = "ar1"
+  spatiotemporal = "ar1"
 )
-summary(fit_spatiotemporal)
-tidy(fit_spatiotemporal)
 
-#Need correct for spatial autocorrelation
-#simulationOutput <- simulateResiduals(fittedModel = res.sa, plot = F)
-#so2=recalculateResiduals(simulationOutput, group = aktrap$animalid, rotation="estimated")
-#testSpatialAutocorrelation(so2,groupLocations$ctr.x, groupLocations$ctr.y)
-#spatial autocorrelation no longer significant, exp structure takes care of it
+#test spatcor after sdmTMB below
+res2temp <- simulate(fit_temporal, nsim = 250, type = "mle-mvn")
+r_pois_temp <- dharma_residuals(res2temp, fit_temporal, return_DHARMa = TRUE,rotation="estimated")
+DHARMa::testSpatialAutocorrelation(r_pois_temp, x = geo.trapd.wk$X, y = geo.trapd.wk$Y)
+#p=0.0591 (was significant in non-sdmTMB version)
 
-
-
+res2 <- simulate(fit_spatiotemporal, nsim = 250, type = "mle-mvn")
+r_pois <- dharma_residuals(res2, fit_spatiotemporal, return_DHARMa = TRUE,rotation="estimated")
+DHARMa::testSpatialAutocorrelation(r_pois, x = geo.trapd.wk$X, y = geo.trapd.wk$Y)
+#p=0.1176 current mesh (cutoff=1) removes spatial autocorrelation in model
 
 # * Tox spatial autocorr ----------------------------------------------------
 
