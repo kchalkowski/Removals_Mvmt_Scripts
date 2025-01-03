@@ -11,11 +11,16 @@
 ## second level is period (before/during/after)
 ### each data frame has all individual combinations per week with # of contacts and # of individuals contacted (Degree) (i.e. ./1_Data/Objects/pairwise_contacts.RDS)
 
+#########for installing older vesrion of tidyverse (for R 3.6.3 on HPC)
+url <- "https://cran.r-project.org/src/contrib/Archive/tidyverse/tidyverse_1.3.2.tar.gz"
+install.packages(url, repos=NULL, type="source",dependencies = T)
+
 library(tidyverse)
 library(snow)
 
-homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
-homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
+# homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt" #nifa server
+homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt" #abbey local
+# homedir <- "/cm/shared/NFS/Projects/AbigailFeuka/Removals_Mvmt" #hpc
 
 cpp_dir <- "./Functions/"
 akde_dir <- paste0(homedir,"/1_Data/Objects/")
@@ -31,10 +36,13 @@ geo.all <-rbind(geo.aer,geo.tox,geo.trap)
 # georem$date_only <- as.Date(georem$date_only)
 # georem$datetime <- as.POSIXct(georem$datetime,format="%Y-%m-%d %H:%M:%S", tz="UTC")
 
-pigs_trt <- geo.all %>% 
-  group_by(Removal.Type,removal.period.akdecalc) %>% 
-  reframe(animalid=unique(animalid))%>% 
-  filter(!(Removal.Type=="aer" & removal.period.akdecalc=="during"))
+# pigs_trt <- geo.all %>%
+#   group_by(Removal.Type,removal.period.akdecalc) %>%
+#   reframe(animalid=unique(animalid))%>%
+#   filter(!(Removal.Type=="aer" & removal.period.akdecalc=="during"))
+# saveRDS(pigs_trt,"C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt/1_Data/Input/pigs_trt.rds")
+
+pigs_trt <- readRDS(paste0(homedir,"/1_Data/Input/pigs_trt.rds"))
 
 # trt_week_orig <- georem %>% 
 #   group_by(removal.period.akdecalc,Removal.Type,week,) %>% 
@@ -45,12 +53,18 @@ periods <- unique(geo.all$removal.period.akdecalc)
 rem_typ <- unique(geo.all$Removal.Type)[-1] #no control group
 cdist <- c(10,30,50)
 
+i<-1
+j<-1
+k<-1
+l<-2
+d<-1
+
 #parallel function ----------
 contact_from_ctmm <- function(i){ # parallel over rem types (3)
   
-  require(tidyverse)
+  # require(tidyverse)
   require(ctmm)
-  require(sf)
+  # require(sf)
   require(Rcpp)
   require(RcppArmadillo)
   
@@ -66,8 +80,11 @@ contact_from_ctmm <- function(i){ # parallel over rem types (3)
     for(j in 1:length(periods)){ #treatment period sub directories
       if(!(rem_typ[i]=="aer" & periods[j]=="during")){ #no during aerial 
         
-          pigs_trt_temp <- pigs_trt %>% filter(Removal.Type==rem_typ[i] &
-                                                 removal.period.akdecalc==periods[j])
+          # pigs_trt_temp <- pigs_trt %>% filter(Removal.Type==rem_typ[i] &
+          #                                        removal.period.akdecalc==periods[j])]
+        
+          pigs_trt_temp <- pigs_trt[pigs_trt$Removal.Type==rem_typ[i] &
+                                               pigs_trt$removal.period.akdecalc==periods[j],]
           # trt_week <- trt_week_orig %>% 
           #   filter(removal.period.akdecalc==periods[j] & Removal.Type==rem_typ[i])
           
@@ -84,12 +101,12 @@ contact_from_ctmm <- function(i){ # parallel over rem types (3)
             
             main_pig_id <- pigs_trt_temp$animalid[k]
             
-            if(file.exists(paste0("C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/ctmm Predicitions/",
+            if(file.exists(paste0(ctmm_dir,
                                   rem_typ[i],"/",main_pig_id,"/",main_pig_id,"_",periods[j],"_one_min_pred.rds"))){
               
-              main_pig_telem <- readRDS(paste0("C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/ctmm Predicitions/",
+              main_pig_telem <- readRDS(paste0(ctmm_dir,
                                                rem_typ[i],"/",main_pig_id,"/",main_pig_id,"_",periods[j],"_one_min_pred.rds"))
-              main_pig_ctmm <- readRDS(paste0("C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Data/AKDE_",
+              main_pig_ctmm <- readRDS(paste0(akde_dir,"AKDE_",
                                               rem_typ[i],"/",main_pig_id,"/",main_pig_id,"_",
                                               periods[j],".rds"))
               
@@ -118,10 +135,10 @@ contact_from_ctmm <- function(i){ # parallel over rem types (3)
                   
                   if(pair_pig_id!=main_pig_id){ #not same pig if statement
                     
-                    pair_pig_telem <- readRDS(paste0("C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/ctmm Predicitions/",
+                    pair_pig_telem <- readRDS(paste0(ctmm_dir,
                                                      rem_typ[i],"/",pair_pig_id,"/",pair_pig_id,"_",periods[j],"_one_min_pred.rds"))
                     
-                    pair_pig_ctmm <- readRDS(paste0("C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Data/AKDE_",
+                    pair_pig_ctmm <- readRDS(paste0(akde_dir,"AKDE_",
                                                     rem_typ[i],"/",pair_pig_id,"/",pair_pig_id,"_",
                                                     periods[j],".rds"))
                     
@@ -189,4 +206,4 @@ system.time(
 )
 stopCluster(cl)
 
-saveRDS(parContacts,file=paste0(objdir,"/pairwise_contacts.RDS"))
+saveRDS(parContacts,file=paste0(objdir,"/pairwise_contacts.rds"))
