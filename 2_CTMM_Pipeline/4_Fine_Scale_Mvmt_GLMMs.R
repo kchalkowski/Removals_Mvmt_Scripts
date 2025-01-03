@@ -48,6 +48,7 @@
   
   #set mesh cutoff for all spatial models
   mesh_cutoff<-1
+  spatial_res <- 500
 }
 
 #distance -------------------
@@ -170,34 +171,42 @@ testSpatialAutocorrelation(tox_test_resid2,tox_groupLocations$mX, tox_groupLocat
 
 ## fit models ------------------
 ### aerial -----------------
-distaer$mX_sc <- distaer$mX/1000
-distaer$mY_sc <- distaer$mY/1000
+distaer$mX_sc <- distaer$mX/spatial_res
+distaer$mY_sc <- distaer$mY/spatial_res
 meshaer <- make_mesh(distaer,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
+distaer$pos <- numFactor(distaer$mX_sc, distaer$mY_sc) 
 
 #### removal type * period ------
-res_distance_rp_aer <- sdmTMB(weekly_dist_km ~ (1|animalid) + 
-                              Removal.Type*removal.period.akdecalc,
-                              data=distaer,
-                              mesh=meshaer,
-                              time='week',
-                              spatial='on',
-                              spatiotemporal = "ar1",
-                              family=Gamma(link='log'))
+res_distance_rp_aer <- glmmTMB(weekly_dist_km ~ ar1(as.factor(week)+0|animalid) + 
+                                 exp(pos + 0 | animalid) +
+                                 Removal.Type*removal.period.akdecalc*sex,
+                               data=distaer,
+                               family=Gamma(link="log"),
+                               verbose=TRUE)
 
-sanity(res_distance_rp_aer)
-
-aer_res <- simulate(res_distance_rp_aer, nsim = 250, type = "mle-mvn") %>% 
-  dharma_residuals(res_distance_rp_aer, return_DHARMa = TRUE,rotation="estimated")
-aer_res2 = recalculateResiduals(aer_res, group = as.factor(distaer$animalid),rotation="estimated")
-plot(aer_res2)
-plot(aer_res2$simulatedResponse)
-DHARMa::testDispersion(aer_res2)
-
-testSpatialAutocorrelation(aer_res2,aer_groupLocations$mX,aer_groupLocations$mY)
-#took care of spatial autocorrelation
-aer_res_week = recalculateResiduals(aer_res, group = distaer$week,rotation="estimated")
-testTemporalAutocorrelation(aer_res_week,time=unique(distaer$week))
-#took care of temporal autocorrelation
+# res_distance_rp_aer <- sdmTMB(weekly_dist_km ~ (1|animalid) + 
+#                               Removal.Type*removal.period.akdecalc,
+#                               data=distaer,
+#                               mesh=meshaer,
+#                               time='week',
+#                               spatial='on',
+#                               spatiotemporal = "ar1",
+#                               family=Gamma(link='log'))
+# 
+# sanity(res_distance_rp_aer)
+# 
+# aer_res <- simulate(res_distance_rp_aer, nsim = 250, type = "mle-mvn") %>% 
+#   dharma_residuals(res_distance_rp_aer, return_DHARMa = TRUE,rotation="estimated")
+# aer_res2 = recalculateResiduals(aer_res, group = as.factor(distaer$animalid),rotation="estimated")
+# plot(aer_res2)
+# plot(aer_res2$simulatedResponse)
+# DHARMa::testDispersion(aer_res2)
+# 
+# testSpatialAutocorrelation(aer_res2,aer_groupLocations$mX,aer_groupLocations$mY)
+# #took care of spatial autocorrelation
+# aer_res_week = recalculateResiduals(aer_res, group = distaer$week,rotation="estimated")
+# testTemporalAutocorrelation(aer_res_week,time=unique(distaer$week))
+# #took care of temporal autocorrelation
 
 saveRDS(res_distance_rp_aer,paste0(results_dir,"res_distance_rp_aer.rds"))
 
@@ -441,8 +450,8 @@ testSpatialAutocorrelation(tox_test_resids2,groupLocations$mX, groupLocations$mY
 
 ## fit glmms ------------------
 ### aerial ----------------
-speedaer$mX_sc <- speedaer$mX/1000
-speedaer$mY_sc <- speedaer$mY/1000
+speedaer$mX_sc <- speedaer$mX/spatial_res
+speedaer$mY_sc <- speedaer$mY/spatial_res
 meshaer_sp <- make_mesh(speedaer,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
 
 #### removal type * period  ------
@@ -528,8 +537,8 @@ saveRDS(res_speed_rps_trap,paste0(results_dir,"res_speed_rps_trap.rds"))
 
 
 ### toxcicant ----------------
-speedtox$mX_sc <- speedtox$mX/1000
-speedtox$mY_sc <- speedtox$mY/1000
+speedtox$mX_sc <- speedtox$mX/spatial_res
+speedtox$mY_sc <- speedtox$mY/spatial_res
 meshtox_sp <- make_mesh(speedtox,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
 
 #### removal type * period ------
