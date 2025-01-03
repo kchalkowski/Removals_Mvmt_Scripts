@@ -12,8 +12,8 @@
 ### each data frame has all individual combinations per week with # of contacts and # of individuals contacted (Degree) (i.e. ./1_Data/Objects/pairwise_contacts.RDS)
 
 #########for installing older vesrion of tidyverse (for R 3.6.3 on HPC)
-url <- "https://cran.r-project.org/src/contrib/Archive/tidyverse/tidyverse_1.3.2.tar.gz"
-install.packages(url, repos=NULL, type="source",dependencies = T)
+# url <- "https://cran.r-project.org/src/contrib/Archive/tidyverse/tidyverse_1.3.2.tar.gz"
+# install.packages(url, repos=NULL, type="source",dependencies = T)
 
 library(tidyverse)
 library(snow)
@@ -53,11 +53,11 @@ periods <- unique(geo.all$removal.period.akdecalc)
 rem_typ <- unique(geo.all$Removal.Type)[-1] #no control group
 cdist <- c(10,30,50)
 
-i<-1
-j<-1
-k<-1
-l<-2
-d<-1
+# i<-1
+# j<-1
+# k<-1
+# l<-2
+# d<-1
 
 #parallel function ----------
 contact_from_ctmm <- function(i){ # parallel over rem types (3)
