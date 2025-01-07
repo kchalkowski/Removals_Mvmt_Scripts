@@ -8,7 +8,7 @@ home<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NI
 
 #inputs:geo_remtype.rds
 
-#outputs:
+#outputs: pairs.rds
 
 # Setup ------------------------------------------------------------------------
 
@@ -18,11 +18,14 @@ library(DHARMa)
 library(ctmm)
 library(fitdistrplus)
 library(ggplot2)
+library(tidyr)
 library(plyr)
 library(dplyr)
 library(hrbrthemes)
 library(sf)
+library(purrr)
 library(mapview)
+library(amt)
 
 #Set dirs
 input=file.path(home,"1_Data","Input",fsep=.Platform$file.sep)
@@ -132,9 +135,9 @@ aer.mcps=GetAreaMetrics(tkmt.n$aer.trks,"mcp",mcp.iso,tkmt.n$animalid)
 tox.mcps=GetAreaMetrics(tkmt.n$tox.trks,"mcp",mcp.iso,tkmt.n$animalid)
 
 # Identify MCP overlaps --------------------------------------------------------------------
-mcp_sf=trap.mcps$mcp
-idrem=trapctrl
-prop=0.1
+#mcp_sf=trap.mcps$mcp
+#idrem=trapctrl
+#prop=0.1 #minimum proportion of hr overlap allowable, 0.1=10% overlap
 Pig_Overlaps=function(mcp_sf,idrem,prop){
 ids=idrem$animalid
   
@@ -179,6 +182,7 @@ intxn=intxn[,c(7,1:6)]
 return(intxn)
 }
 
+#Run pig overlap functions, get pair data frames
 trap_pairs=Pig_Overlaps(trap.mcps$mcp,trapctrl,0.01)
 aer_pairs=Pig_Overlaps(aer.mcps$mcp,aerctrl,0.01)
 tox_pairs=Pig_Overlaps(tox.mcps$mcp,toxctrl,0.01)
