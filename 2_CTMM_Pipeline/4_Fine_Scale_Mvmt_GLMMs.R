@@ -44,10 +44,10 @@
   
   aktox.sumperiods=aktox %>% group_by(animalid,period) %>% dplyr::summarise(n()) %>% tidyr::pivot_wider(names_from="period",values_from=`n()`) %>% as.data.frame()
   died.tox=aktox.sumperiods[which(is.na(aktox.sumperiods$after)),1]
-  results_dir <- paste0(homedir,"/3_Output/")
+  results_dir <- paste0(homedir,"/1_Data/Objects/Models")
   
   #set mesh cutoff for all spatial models
-  mesh_cutoff<-3
+  mesh_cutoff<-1
   spatial_res <- 1000
 }
 
@@ -226,6 +226,7 @@ DHARMa::testDispersion(aer_res2)
 testSpatialAutocorrelation(aer_res2,aer_groupLocations$mX,aer_groupLocations$mY)
 #took care of spatial autocorrelation
 saveRDS(res_distance_rp_aer,paste0(results_dir,"res_distance_rp_aer.rds"))
+
 
 #### removal type * period * sex ------
 # res_distance_rps_aer=sdmTMB(weekly_dist_km ~ (1|animalid) + 
@@ -613,3 +614,236 @@ testTemporalAutocorrelation(tox_res_sp_rps_week,time=unique(speedtox$week))
 #took care of temporal autocorrealtion
 
 saveRDS(res_speed_rps_tox,paste0(results_dir,"res_speed_rps_tox.rds"))
+
+# contacts - number --------
+parContacts <- readRDS(paste0(objdir,"/pairwise_contacts.rds"))
+
+con <- do.call("rbind.data.frame",parContacts)
+con$period <- factor(con$period,levels=c('before','during','after'))
+
+con <- con %>% rename(Removal.Type=rem_typ,
+               removal.period.akdecalc=period)
+
+conaer <- con %>% filter(Removal.Type=='aer')
+contox <- con %>% filter(Removal.Type=='tox')
+contrap <- con %>% filter(Removal.Type=='trap')
+
+res_ncon_rp_aer=glmmTMB(num_contacts~(1|animalid)+
+                        removal.period.akdecalc,
+                        data=conaer,
+                        family=nbinom12(link="log"))
+
+#aerial ------
+## removal type * period -----
+res_ncon_rp_aer=glmmTMB(num_contacts~(1|animalid)+
+                        Removal.Type*removal.period.akdecalc,
+                         data=conaer,
+                         family=poisson(link='log')
+                        # family=nbinom12(link="log")
+                        )
+
+aer_res_ncon_rp <- simulateResiduals(res_ncon_rp_aer)
+aer_res_ncon_rp2 = recalculateResiduals(aer_res_ncon_rp, 
+                                        group = as.factor(conaer$animalid), 
+                                        rotation="estimated")
+plot(aer_res_ncon_rp2)
+plot(aer_res_ncon_rp2$simulatedResponse)
+descdist(aer_res_ncon_rp2$fittedResiduals)
+DHARMa::testDispersion(aer_res_ncon_rp2)
+
+saveRDS(res_ncon_rp_aer,paste0(results_dir,"res_ncon_rp_aer.rds"))
+
+## removal type * period *sex -----
+res_ncon_rps_aer=glmmTMB(num_contacts~(1|animalid)+
+                          Removal.Type*removal.period.akdecalc*sex,
+                        data=conaer,
+                        family=poisson(link='log'))
+
+aer_res_ncon_rps <- simulateResiduals(res_ncon_rps_aer)
+aer_res_ncon_rps2 = recalculateResiduals(aer_res_ncon_rps, 
+                                        group = as.factor(conaer$animalid), 
+                                        rotation="estimated")
+plot(aer_res_ncon_rps2)
+plot(aer_res_ncon_rps2$simulatedResponse)
+descdist(aer_res_ncon_rps2$fittedResiduals)
+DHARMa::testDispersion(aer_res_ncon_rps2)
+
+saveRDS(res_ncon_rps_aer,paste0(results_dir,"res_ncon_rps_aer.rds"))
+
+#trap ------
+## removal type * period -----
+res_ncon_rp_trap=glmmTMB(num_contacts~(1|animalid)+
+                          Removal.Type*removal.period.akdecalc,
+                        data=contrap,
+                        family=poisson(link='log'))
+
+trap_res_ncon_rp <- simulateResiduals(res_ncon_rp_trap)
+trap_res_ncon_rp2 = recalculateResiduals(trap_res_ncon_rp, 
+                                        group = as.factor(contrap$animalid), 
+                                        rotation="estimated")
+plot(trap_res_ncon_rp2)
+plot(trap_res_ncon_rp2$simulatedResponse)
+descdist(trap_res_ncon_rp2$fittedResiduals)
+DHARMa::testDispersion(trap_res_ncon_rp2)
+
+saveRDS(res_ncon_rp_trap,paste0(results_dir,"res_ncon_rp_trap.rds"))
+
+## removal type * period *sex -----
+res_ncon_rps_trap=glmmTMB(num_contacts~(1|animalid)+
+                           Removal.Type*removal.period.akdecalc*sex,
+                         data=contrap,
+                         family=poisson(link='log'))
+
+trap_res_ncon_rps <- simulateResiduals(res_ncon_rps_trap)
+trap_res_ncon_rps2 = recalculateResiduals(trap_res_ncon_rps, 
+                                         group = as.factor(contrap$animalid), 
+                                         rotation="estimated")
+plot(trap_res_ncon_rps2)
+plot(trap_res_ncon_rps2$simulatedResponse)
+descdist(trap_res_ncon_rps2$fittedResiduals)
+DHARMa::testDispersion(trap_res_ncon_rps2)
+
+saveRDS(res_ncon_rps_trap,paste0(results_dir,"res_ncon_rps_trap.rds"))
+
+#tox ------
+## removal type * period -----
+res_ncon_rp_tox=glmmTMB(num_contacts~(1|animalid)+
+                          Removal.Type*removal.period.akdecalc,
+                        data=contox,
+                        family=poisson(link='log'))
+
+tox_res_ncon_rp <- simulateResiduals(res_ncon_rp_tox)
+tox_res_ncon_rp2 = recalculateResiduals(tox_res_ncon_rp, 
+                                        group = as.factor(contox$animalid), 
+                                        rotation="estimated")
+plot(tox_res_ncon_rp2)
+plot(tox_res_ncon_rp2$simulatedResponse)
+descdist(tox_res_ncon_rp2$fittedResiduals)
+DHARMa::testDispersion(tox_res_ncon_rp2)
+
+saveRDS(res_ncon_rp_tox,paste0(results_dir,"res_ncon_rp_tox.rds"))
+
+## removal type * period *sex -----
+res_ncon_rps_tox=glmmTMB(num_contacts~(1|animalid)+
+                           Removal.Type*removal.period.akdecalc*sex,
+                         data=contox,
+                         family=poisson(link='log'))
+
+tox_res_ncon_rps <- simulateResiduals(res_ncon_rps_tox)
+tox_res_ncon_rps2 = recalculateResiduals(tox_res_ncon_rps, 
+                                         group = as.factor(contox$animalid), 
+                                         rotation="estimated")
+plot(tox_res_ncon_rps2)
+plot(tox_res_ncon_rps2$simulatedResponse)
+descdist(tox_res_ncon_rps2$fittedResiduals)
+DHARMa::testDispersion(tox_res_ncon_rps2)
+
+saveRDS(res_ncon_rps_tox,paste0(results_dir,"res_ncon_rps_tox.rds"))
+
+
+# contacts - degree --------
+
+#aerial ------
+## removal type * period -----
+res_nind_rp_aer=glmmTMB(num_indivs~(1|animalid)+
+                          Removal.Type*removal.period.akdecalc,
+                        data=conaer,
+                        family=poisson(link='log'))
+
+aer_res_nind_rp <- simulateResiduals(res_nind_rp_aer)
+aer_res_nind_rp2 = recalculateResiduals(aer_res_nind_rp, 
+                                        group = as.factor(conaer$animalid), 
+                                        rotation="estimated")
+plot(aer_res_nind_rp2)
+plot(aer_res_nind_rp2$simulatedResponse)
+descdist(aer_res_nind_rp2$fittedResiduals)
+DHARMa::testDispersion(aer_res_nind_rp2)
+
+saveRDS(res_nind_rp_aer,paste0(results_dir,"res_nind_rp_aer.rds"))
+
+## removal type * period *sex -----
+res_nind_rps_aer=glmmTMB(num_indivs~(1|animalid)+
+                           Removal.Type*removal.period.akdecalc*sex,
+                         data=conaer,
+                         family=poisson(link='log'))
+
+aer_res_nind_rps <- simulateResiduals(res_nind_rps_aer)
+aer_res_nind_rps2 = recalculateResiduals(aer_res_nind_rps, 
+                                         group = as.factor(conaer$animalid), 
+                                         rotation="estimated")
+plot(aer_res_nind_rps2)
+plot(aer_res_nind_rps2$simulatedResponse)
+descdist(aer_res_nind_rps2$fittedResiduals)
+DHARMa::testDispersion(aer_res_nind_rps2)
+
+saveRDS(res_nind_rps_aer,paste0(results_dir,"res_nind_rps_aer.rds"))
+
+#trap ------
+## removal type * period -----
+res_nind_rp_trap=glmmTMB(num_indivs~(1|animalid)+
+                           Removal.Type*removal.period.akdecalc,
+                         data=contrap,
+                         family=poisson(link='log'))
+
+trap_res_nind_rp <- simulateResiduals(res_nind_rp_trap)
+trap_res_nind_rp2 = recalculateResiduals(trap_res_nind_rp, 
+                                         group = as.factor(contrap$animalid), 
+                                         rotation="estimated")
+plot(trap_res_nind_rp2)
+plot(trap_res_nind_rp2$simulatedResponse)
+descdist(trap_res_nind_rp2$fittedResiduals)
+DHARMa::testDispersion(trap_res_nind_rp2)
+
+saveRDS(res_nind_rp_trap,paste0(results_dir,"res_nind_rp_trap.rds"))
+
+## removal type * period *sex -----
+res_nind_rps_trap=glmmTMB(num_indivs~(1|animalid)+
+                            Removal.Type*removal.period.akdecalc*sex,
+                          data=contrap,
+                          family=poisson(link='log'))
+
+trap_res_nind_rps <- simulateResiduals(res_nind_rps_trap)
+trap_res_nind_rps2 = recalculateResiduals(trap_res_nind_rps, 
+                                          group = as.factor(contrap$animalid), 
+                                          rotation="estimated")
+plot(trap_res_nind_rps2)
+plot(trap_res_nind_rps2$simulatedResponse)
+descdist(trap_res_nind_rps2$fittedResiduals)
+DHARMa::testDispersion(trap_res_nind_rps2)
+
+saveRDS(res_nind_rps_trap,paste0(results_dir,"res_nind_rps_trap.rds"))
+
+#tox ------
+## removal type * period -----
+res_nind_rp_tox=glmmTMB(num_indivs~(1|animalid)+
+                          Removal.Type*removal.period.akdecalc,
+                        data=contox,
+                        family=poisson(link='log'))
+
+tox_res_nind_rp <- simulateResiduals(res_nind_rp_tox)
+tox_res_nind_rp2 = recalculateResiduals(tox_res_nind_rp, 
+                                        group = as.factor(contox$animalid), 
+                                        rotation="estimated")
+plot(tox_res_nind_rp2)
+plot(tox_res_nind_rp2$simulatedResponse)
+descdist(tox_res_nind_rp2$fittedResiduals)
+DHARMa::testDispersion(tox_res_nind_rp2)
+
+saveRDS(res_nind_rp_tox,paste0(results_dir,"res_nind_rp_tox.rds"))
+
+## removal type * period *sex -----
+res_nind_rps_tox=glmmTMB(num_indivs~(1|animalid)+
+                           Removal.Type*removal.period.akdecalc*sex,
+                         data=contox,
+                         family=poisson(link='log'))
+
+tox_res_nind_rps <- simulateResiduals(res_nind_rps_tox)
+tox_res_nind_rps2 = recalculateResiduals(tox_res_nind_rps, 
+                                         group = as.factor(contox$animalid), 
+                                         rotation="estimated")
+plot(tox_res_nind_rps2)
+plot(tox_res_nind_rps2$simulatedResponse)
+descdist(tox_res_nind_rps2$fittedResiduals)
+DHARMa::testDispersion(tox_res_nind_rps2)
+
+saveRDS(res_nind_rps_tox,paste0(results_dir,"res_nind_rps_tox.rds"))
