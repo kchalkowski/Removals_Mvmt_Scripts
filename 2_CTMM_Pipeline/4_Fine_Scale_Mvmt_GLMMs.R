@@ -44,7 +44,7 @@
   
   aktox.sumperiods=aktox %>% group_by(animalid,period) %>% dplyr::summarise(n()) %>% tidyr::pivot_wider(names_from="period",values_from=`n()`) %>% as.data.frame()
   died.tox=aktox.sumperiods[which(is.na(aktox.sumperiods$after)),1]
-  results_dir <- paste0(homedir,"/1_Data/Objects/Models")
+  results_dir <- paste0(homedir,"/1_Data/Objects/Models/")
   
   #set mesh cutoff for all spatial models
   mesh_cutoff<-1
