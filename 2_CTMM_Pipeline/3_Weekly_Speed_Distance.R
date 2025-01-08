@@ -29,7 +29,7 @@ objdir=file.path(homedir,"1_Data","Objects",fsep=.Platform$file.sep)
 geo.aer<-readRDS(file.path(objdir,"geoaer.rds"))
 geo.tox<-readRDS(file.path(objdir,"geotox.rds"))
 geo.trap<-readRDS(file.path(objdir,"geotrap.rds"))
-# * ! Note, combining geo_rem dfs ------------
+# * ! Note, combining geo_rem dfs 
 # be very careful when combining any of these-- I see it's just used below to add sex back in
 # any time geo_rem dfs are combined, needs to have a column for trt_ctrl-- otherwise no way to tell which controls go to which removal types
 # all removal types had same control pigs, but the actual trajectories of those control pigs vary based on the time scales relevant for each removal period
@@ -76,29 +76,41 @@ rem_typ <- unique(geo.all$Removal.Type)[-1] #no control group
 cpp_dir = file.path(homedir,"2_Scripts","Functions", fsep = .Platform$file.sep)
 Rcpp::sourceCpp(file.path(cpp_dir,"TestPairwise.cpp", fsep = .Platform$file.sep), verbose=TRUE)
 
+# Get weekly distances --------------------------------
+
+#Initialize output lists
 pig_dist_per_rem <- pig_speed_per_rem <- list()
 
-# i<-1
-# k<-1
-# j<-2
-# * ! pig_id not in script outside loop-- troubleshooting? comment below line out? ----
-#geo.aer %>% filter(animalid==pig_id[j]) %>% select(date_only) %>% reframe(range(date_only))
+#Set pig ids to remove from further analysis if they show up
+#Remove aerial pigs that were accidentally culled:
+aer_gone=c("48476_2_4Y_4Y","85401_2_U_U","85440_E2_E2")
+#Remove tox pig with no data in 'before' period
+tox_gone=c("86070_H2_H2")
 
+#start loop through folders, get predictions
 for(i in 1:length(rem_typ)){
+  
   print(paste0("starting rem type ", rem_typ[i]))
   pig_id <- list.files(file.path(ctmm_dir,rem_typ[i], fsep = .Platform$file.sep))
   pig_id <- pig_id[!pig_id%in%rem_typ]
   
+  #Remove gone pigs
+  pig_id=pig_id[!(pig_id%in%aer_gone|pig_id%in%tox_gone)]
+  
+  #initialize empty lists
   pig_dist_per_rem[[i]] <- list()
   pig_speed_per_rem[[i]] <- list()
   
+  #loop through periods
   for(k in 1:length(periods)){
     
+    #Start sub-lists for period subsets
     pig_dist_per_rem[[i]][[k]] <- NA
     pig_speed_per_rem[[i]][[k]] <- NA
     
     if(!(rem_typ[i]=="aer" & periods[k]=="during")){
       
+      #loop through pig ids
       for(j in 1:length(pig_id)){
         
         filename <- file.path(ctmm_dir,
@@ -231,24 +243,8 @@ pig_speed_all <- do.call("rbind.data.frame",pig_speed_per_rem)
 pig_dist_all <- pig_dist_all %>% filter(!is.na(rem_typ))
 pig_speed_all <- pig_speed_all %>% filter(!is.na(rem_typ))
 
-# saveRDS(pig_dist_all,file=paste0(objdir,"/daily_distance_nifa.rds"))
-# saveRDS(pig_speed_all,file=paste0(objdir,"/hourly_speed_nifa.rds"))
-
-# pig_dist_all <- readRDS(paste0(objdir,"/daily_distance_nifa.rds"))
-# pig_speed_all <- readRDS(paste0(objdir,"/hourly_speed_nifa.rds"))
-
 # weekly summaries-----------------
 ## distance ----------------
-# pig_dist_all <- readRDS(paste0(objdir,"/daily_distance_nifa.rds"))
-
-# * ! Note about control designations ----------
-#Commenting out below code for setting ctrl ids-- 
-#no way to tell removal types for controls between treatments in resulting output
-#see lines 214-222 to see fix for this
-#add controls in 
-#ctrl_ids <- geo.all %>% filter(Removal.Type=="ctrl") %>%
-#  reframe(animalid=unique(animalid))
-#pig_dist_all$rem_typ[pig_dist_all$animalid%in%ctrl_ids$animalid] <- "ctrl"
 
 #add sex
 pig_dist_all <- pig_dist_all %>% dplyr::left_join(geo.all %>% dplyr::select(sex,animalid) %>% distinct())
@@ -266,6 +262,17 @@ pig_dist_wk <- pig_dist_all %>%
          removal.period.akdecalc=period,
          mX=mn_x,
          mY=mn_y)
+
+#formatting 
+#offset to prevent 0's
+dist$weekly_dist_km <- dist$weekly_dist_km +0.0001
+dist$animalid <- factor(dist$animalid)
+dist$sex <- factor(dist$sex)
+
+#trt_ctrl levels
+distaer$trt_ctrl <- factor(distaer$trt_ctrl,levels=c('ctrl','trt'))
+disttox$trt_ctrl <- factor(disttox$trt_ctrl,levels=c('ctrl','trt'))
+disttrap$trt_ctrl <- factor(disttrap$trt_ctrl,levels=c('ctrl','trt'))
 
 saveRDS(pig_dist_wk,paste0(objdir,"/pig_weekly_distance_ctmm.rds"))
 
@@ -297,6 +304,15 @@ pig_speed_wk <- pig_speed_all %>%
  filter(!is.na(rem_typ)) %>% 
   rename(Removal.Type=rem_typ,
          removal.period.akdecalc=period)
+
+
+#offset by very small amount
+pig_speed_wk$weekly_md_km_hr <- pig_speed_wk$weekly_md_km_hr + 0.0001
+pig_speed_wk$animalid <- factor(pig_speed_wk$animalid)
+
+pig_speed_wk$sex <- factor(pig_speed_wk$sex)
+
+pig_speed_wk$trt_ctrl <- factor(pig_speed_wk$trt_ctrl,levels=c('ctrl','trt'))
 
 saveRDS(pig_speed_wk,paste0(objdir,"/pig_weekly_speed_ctmm.rds"))
 
