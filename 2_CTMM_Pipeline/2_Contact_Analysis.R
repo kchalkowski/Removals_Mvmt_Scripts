@@ -15,9 +15,9 @@ library(tidyverse)
 library(snow)
 
 # homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt" #nifa server
-# homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt" #abbey local
+homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt" #abbey local
 # homedir <- "/cm/shared/NFS/Projects/AbigailFeuka/Removals_Mvmt" #hpc
-homedir <- "/home/abigail.feuka/files/Removals_Mvmt" #hpc (win scp)
+# homedir <- "/home/abigail.feuka/files/Removals_Mvmt" #hpc (win scp)
 
 cpp_dir <- "./Functions/"
 ctmm_dir <- paste0(homedir,"/1_Data/Objects/ctmm_Predictions/")
@@ -173,7 +173,7 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
                       num_contacts_main[d,l] <- sum(main_pair_dist<cdist[d])
                       
                     } #distance thresholds
-                  }  #not same pig if statement
+                  }  #not same pig / hr overlap if statement
                 }  # all pairs for indiv pig
                 
                 for(d in 1:length(cdist)){ # distance - summing contacts and indivs per pig
