@@ -82,7 +82,6 @@ pig_dist_per_rem <- pig_speed_per_rem <- list()
 # * ! pig_id not in script outside loop-- comment below line out? ----
 #geo.aer %>% filter(animalid==pig_id[j]) %>% select(date_only) %>% reframe(range(date_only))
 
-# ! * hold loop for processing ------  
 for(i in 1:length(rem_typ)){
   print(paste0("starting rem type ", rem_typ[i]))
   pig_id <- list.files(file.path(ctmm_dir,rem_typ[i], fsep = .Platform$file.sep))
@@ -221,8 +220,7 @@ for(i in 1:length(rem_typ)){
   #nrow(pig_dist_per_rem[[i]][pig_dist_per_rem[[i]]$animalid%in%as.character(ctrl_id$animalid),])
   pig_dist_per_rem[[i]]$trt_ctrl[pig_dist_per_rem[[i]]$animalid%in%as.character(ctrl_id$animalid)]<-"ctrl"
   pig_speed_per_rem[[i]]$trt_ctrl[pig_speed_per_rem[[i]]$animalid%in%as.character(ctrl_id$animalid)]<-"ctrl"
-  
-# ! * hold loop for processing ------  
+
   } # removal type loop
 
 pig_dist_all <- do.call("rbind.data.frame",pig_dist_per_rem)           
@@ -241,7 +239,10 @@ pig_speed_all <- pig_speed_all %>% filter(!is.na(rem_typ))
 ## distance ----------------
 # pig_dist_all <- readRDS(paste0(objdir,"/daily_distance_nifa.rds"))
 
-#Removing this-- no way to tell removal types for controls between treatments
+# * ! Note about control designations ----------
+#Removing this section-- 
+#no way to tell removal types for controls between treatments in resulting output
+#see lines 214-222 to see fix for this
 #add controls in 
 #ctrl_ids <- geo.all %>% filter(Removal.Type=="ctrl") %>%
 #  reframe(animalid=unique(animalid))
