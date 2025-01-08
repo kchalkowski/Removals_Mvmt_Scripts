@@ -2,6 +2,7 @@
 home<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
 
 # Purpose ----------------------------------------------------------------------
+
 #The purpose of this script is run autocorrelation diagnostics and glmms for akde home range size estimates
 
 # In/Out -----------------------------------------------------------------------
@@ -10,12 +11,6 @@ home<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NI
 #outdf_akde_aer_corrected_f.rds, outdf_akde_tox_corrected_f.rds, outdf_akde_trap_corrected_f.rds
 
 #outputs: stitched results figure
-
-help(package="glmmTMB") #1.1.9 
-
-remove.packages("glmmTMB")
-library(glmmTMB)
-install.packages("glmmTMB")
 
 # Setup ------------------------------------------------------------------------
 

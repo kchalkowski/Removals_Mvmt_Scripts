@@ -49,7 +49,10 @@ fp.chulls=readRDS(file.path(input,"fp.chulls.rds",fsep=.Platform$file.sep)) #fli
 
 #source needed functions
 func.list=list.files(funcdir,full.names=TRUE)
+#remove any cpp ones, not needed here
+func.list=func.list[-grep("cpp",func.list)]
 for(f in 1:length(func.list)){
+  print(f)
   source(func.list[f])
 }
 
@@ -318,6 +321,9 @@ geo=geo[!is.na(geo$Removal.Type),]
 geo=geo[,-c(which(colnames(geo)=="jDate"),
         which(colnames(geo)=="week"),
         which(colnames(geo)=="wk_id"))]
+
+#save out full dataset (before cutoffs)
+saveRDS(geo,file.path(objdir,"geo_remtype.rds"))
 
 # Determine period designations ------------------------------------------------
 
