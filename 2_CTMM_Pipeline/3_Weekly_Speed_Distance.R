@@ -29,7 +29,10 @@ objdir=file.path(homedir,"1_Data","Objects",fsep=.Platform$file.sep)
 geo.aer<-readRDS(file.path(objdir,"geoaer.rds"))
 geo.tox<-readRDS(file.path(objdir,"geotox.rds"))
 geo.trap<-readRDS(file.path(objdir,"geotrap.rds"))
-# * ! geo.all ------
+# * ! Note, combining geo_rem dfs ------------
+# be very careful when combining any of these-- I see it's just used below to add sex back in
+# any time geo_rem dfs are combined, needs to have a column for trt_ctrl-- otherwise no way to tell which controls go to which removal types
+# all removal types had same control pigs, but the actual trajectories of those control pigs vary based on the time scales relevant for each removal period
 geo.all <- rbind(geo.aer,geo.tox,geo.trap)
 
 # georem$date_only <- as.Date(georem$date_only)
@@ -78,8 +81,7 @@ pig_dist_per_rem <- pig_speed_per_rem <- list()
 # i<-1
 # k<-1
 # j<-2
-# * ! what this j switch for? ----
-# * ! pig_id not in script outside loop-- comment below line out? ----
+# * ! pig_id not in script outside loop-- troubleshooting? comment below line out? ----
 #geo.aer %>% filter(animalid==pig_id[j]) %>% select(date_only) %>% reframe(range(date_only))
 
 for(i in 1:length(rem_typ)){
@@ -240,7 +242,7 @@ pig_speed_all <- pig_speed_all %>% filter(!is.na(rem_typ))
 # pig_dist_all <- readRDS(paste0(objdir,"/daily_distance_nifa.rds"))
 
 # * ! Note about control designations ----------
-#Removing this section-- 
+#Commenting out below code for setting ctrl ids-- 
 #no way to tell removal types for controls between treatments in resulting output
 #see lines 214-222 to see fix for this
 #add controls in 
@@ -265,7 +267,7 @@ pig_dist_wk <- pig_dist_all %>%
          mX=mn_x,
          mY=mn_y)
 
-#saveRDS(pig_dist_wk,paste0(objdir,"/pig_weekly_distance_ctmm.rds"))
+saveRDS(pig_dist_wk,paste0(objdir,"/pig_weekly_distance_ctmm.rds"))
 
 #entire treatment group per week -----------
 pig_dist_wk_trt <- pig_dist_wk %>% 
@@ -280,7 +282,6 @@ pig_dist_wk_trt <- pig_dist_wk %>%
 
 ## speed -------------------------
 # pig_speed_all <- readRDS(paste0(objdir,"/hourly_speed_nifa.rds"))
-
 #pig_speed_all$rem_typ[pig_speed_all$animalid%in%ctrl_ids$animalid] <- "ctrl"
 
 #add sex
