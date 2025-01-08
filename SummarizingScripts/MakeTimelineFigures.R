@@ -49,14 +49,16 @@ geo.trapd.wk=readRDS(file.path(objdir,"geo_trapd_wk.rds"))
 geo.toxd.wk=readRDS(file.path(objdir,"geo_toxd_wk.rds"))
 
 #Read in distance data:
-distaer=readRDS(file.path(objdir,"distaer.rds"))
-disttrap=readRDS(file.path(objdir,"distrap.rds"))
-disttox=readRDS(file.path(objdir,"disttox.rds"))
+#distaer=readRDS(file.path(objdir,"distaer.rds"))
+#disttrap=readRDS(file.path(objdir,"distrap.rds"))
+#disttox=readRDS(file.path(objdir,"disttox.rds"))
 
 #Read in speed data:
-speedaer=readRDS(file.path(objdir,"speedaer.rds"))
-speedtrap=readRDS(file.path(objdir,"speedtrap.rds"))
-speedtox=readRDS(file.path(objdir,"speedtox.rds"))
+#speedaer=readRDS(file.path(objdir,"speedaer.rds"))
+#speedtrap=readRDS(file.path(objdir,"speedtrap.rds"))
+#speedtox=readRDS(file.path(objdir,"speedtox.rds"))
+
+dist=readRDS(file.path(objdir,"pig_weekly_distance_ctmm.rds"))
 
 
 # Format and join data ---------------------------------------------------------

@@ -12,6 +12,7 @@ library(move)
 
 # homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
 # homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
+# homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
 
 akde_dir <- paste0(homedir,"/1_Data/Objects/")
 ctmm_dir <- paste0(homedir,"/1_Data/Objects/ctmm_Predictions/")
