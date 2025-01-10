@@ -29,52 +29,54 @@ georem <- read.csv(paste0(objdir,"/geo_remtyp_period.csv"))
 geo.aer<-readRDS(file.path(objdir,"geoaer.rds"))
 geo.tox<-readRDS(file.path(objdir,"geotox.rds"))
 geo.trap<-readRDS(file.path(objdir,"geotrap.rds"))
-geo.all <-rbind(geo.aer,geo.tox,geo.trap)
 
-# pigs_trt <- geo.all %>%
-#   group_by(Removal.Type,removal.period.akdecalc) %>%
-#   reframe(animalid=unique(animalid))%>%
-#   filter(!(Removal.Type=="aer" & removal.period.akdecalc=="during"))
-# saveRDS(pigs_trt,"C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt/1_Data/Input/pigs_trt.rds")
-
-pigs_trt <- readRDS(paste0(homedir,"/1_Data/Input/pigs_trt.rds"))
-
-periods <- unique(geo.all$removal.period.akdecalc)
-rem_typ <- unique(geo.all$Removal.Type) #no control group
+periods <- unique(geo.trap$removal.period.akdecalc)
+rem_typ <- c("ctrl","aer","tox","trap")
 rem_typ_folders <- rem_typ[-which(rem_typ=="ctrl")]
 cdist <- c(10,30,50)
 
 #identify controls in each folder 
 akde_files<-list()
-for(rem in c("aer","tox","trap")){
+for(rem in rem_typ_folders){
   
-  i<-which(c('aer','tox','trap')==rem)
+  i<-which(rem_typ_folders==rem)
   
   dir_files <- list.files(paste0(objdir,"/AKDE_",rem))
   if(rem%in%dir_files){
     dir_files <- dir_files[-which(dir_files==rem)]
   }
 
-  akde_files[[i]]  <- data.frame(animalid=dir_files,
+  akde_files[[i]] <- data.frame(animalid=dir_files,
                            rem_typ=NA,
                            rem_typ_folder=rem)
   
-  pigs_trt_temp <- pigs_trt %>% filter(Removal.Type==rem) %>% 
-    dplyr::select(animalid) %>% distinct()
+  if(rem=="aer"){
+    geo.gen <- geo.aer
+  } else if(rem=="tox"){
+    geo.gen <- geo.tox
+  } else {
+    geo.gen <- geo.trap
+  }
   
-  akde_files[[i]] $rem_typ[!akde_files[[i]] $animalid%in%unique(pigs_trt_temp$animalid)] <- "ctrl"
-  akde_files[[i]] $rem_typ[akde_files[[i]] $animalid%in%unique(pigs_trt_temp$animalid)] <- rem
+  pigs_trt_temp <- geo.gen %>% 
+    group_by(Removal.Type) %>% 
+    reframe(animalid=unique(animalid))
+  
+  ctrl_pigs <- pigs_trt_temp %>% filter(Removal.Type=="ctrl")
+  trmt_pigs <- pigs_trt_temp %>% filter(Removal.Type==rem)
+  
+  akde_files[[i]]$rem_typ[akde_files[[i]]$animalid%in%ctrl_pigs$animalid] <- "ctrl"
+  akde_files[[i]]$rem_typ[akde_files[[i]]$animalid%in%trmt_pigs$animalid] <- "trt"
+  
 }
 akde_files <- do.call("rbind.data.frame",akde_files)
 
-akde_files %>% ungroup() %>%  dplyr::group_by(factor(animalid)) %>% 
-  dplyr::summarise(n=length(unique(rem_typ))) %>% 
-  dplyr::summarise(length(unique(n)))
+#remove pigs that got filtered out/ not in AKDE folders
+akde_files <- akde_files %>% filter(!is.na(rem_typ))
 
 hr_pairs <- readRDS(paste0(objdir,"/pairs.rds"))
   
 # rem_idx<-2
-# per_idx<-2
 # k<-1
 # l<-2
 # d<-1
@@ -88,7 +90,7 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
   # require(sf)
   require(Rcpp)
   require(RcppArmadillo)
-  
+
   #source rcpp function
   Rcpp::sourceCpp(paste0(cpp_dir,"TestPairwise.cpp"), verbose=TRUE)
   
@@ -111,10 +113,10 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
             
             #distance matrix for number of contacts and number of individuals contacted (degree)
             #for each removal type and treatment period combo
-            dist_mat[[w]] <- expand_grid(rem_typ=unique(pigs_trt_temp$rem_typ),
+            dist_mat[[w]] <- expand_grid(rem_typ=rem_typ_folders[rem_idx],
+                                         trt_typ=unique(pigs_trt_temp$rem_typ),
                                          period=periods[per_idx],
                                          animalid=unique(pigs_trt_temp$animalid),
-                                         # week=unique(trt_week$week),
                                          dist=cdist,
                                          num_contacts=NA,
                                          num_indivs=NA)
@@ -131,9 +133,16 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
                  ){
                 
                 main_pig_telem <- readRDS(paste0(ctmm_dir,
-                                                 rem_typ_folders[rem_idx],"/",main_pig_id,"/",main_pig_id,"_",periods[per_idx],"_one_min_pred.rds"))
+                                                 rem_typ_folders[rem_idx],
+                                                 "/",main_pig_id,
+                                                 "/",main_pig_id,
+                                                 "_",periods[per_idx],
+                                                 "_one_min_pred.rds"))
+                
                 main_pig_ctmm <- readRDS(paste0(objdir,"/AKDE_",
-                                                rem_typ_folders[rem_idx],"/",main_pig_id,"/",main_pig_id,"_",
+                                                rem_typ_folders[rem_idx],
+                                                "/",main_pig_id,
+                                                "/",main_pig_id,"_",
                                                 periods[per_idx],".rds"))
                 
                 num_contacts_main <- matrix(NA,nrow=length(cdist),ncol=nrow(pigs_trt_temp))
@@ -141,38 +150,52 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
                 # for(l in 1:2){
                 for(l in 1:nrow(pigs_trt_temp)){ # all pairs for indiv pig
                   
-                  hr_trt_pairs <- hr_pairs %>% filter(id_1==main_pig_id & 
-                                     rem==rem_typ_folders[rem_idx])
+                  #only estimate contact for pigs within 1% HR overlap 
+                  #AND within same treatment group
+                  hr_trt_pairs <- hr_pairs %>% 
+                    filter(id_1==main_pig_id & 
+                             rem==rem_typ_folders[rem_idx] &
+                             trt_ctrl_1==folder_trmts[w])
                   
                   pair_pig_id <- pigs_trt_temp$animalid[l]
                   
                   if(pair_pig_id!=main_pig_id &  #not same pig and
                      pair_pig_id%in%hr_trt_pairs$id_2){ #at least 1% HR overlap
                     
-                    pair_pig_telem <- readRDS(paste0(ctmm_dir,
-                                                     rem_typ_folders[rem_idx],
-                                                     "/",pair_pig_id,
-                                                     "/",pair_pig_id,
-                                                     "_",periods[per_idx],"_one_min_pred.rds"))
-                    
-                    pair_pig_ctmm <- readRDS(paste0(objdir,"/AKDE_",
-                                                    rem_typ_folders[rem_idx],
-                                                    "/",pair_pig_id,
-                                                    "/",pair_pig_id,"_",
-                                                    periods[per_idx],".rds"))
-                    
-                    pair_pig_pred <- ctmm::predict(pair_pig_ctmm,
-                                                   data=pair_pig_telem,
-                                                   t=main_pig_telem$t)
-                    
-                    main_pair_dist <- TestPairwise(main_pig_telem$x,main_pig_telem$y,
-                                                   pair_pig_pred$x,pair_pig_pred$y,NA)
-                    
-                    for(d in 1:length(cdist)){#distance thresholds
+                    if(file.exists(paste0(ctmm_dir,
+                                       rem_typ_folders[rem_idx],
+                                       "/",pair_pig_id,
+                                       "/",pair_pig_id,
+                                       "_",periods[per_idx],"_one_min_pred.rds"))){
                       
-                      num_contacts_main[d,l] <- sum(main_pair_dist<cdist[d])
+                      pair_pig_telem <- readRDS(paste0(ctmm_dir,
+                                                       rem_typ_folders[rem_idx],
+                                                       "/",pair_pig_id,
+                                                       "/",pair_pig_id,
+                                                       "_",periods[per_idx],
+                                                       "_one_min_pred.rds"))
                       
-                    } #distance thresholds
+                      pair_pig_ctmm <- readRDS(paste0(objdir,"/AKDE_",
+                                                      rem_typ_folders[rem_idx],
+                                                      "/",pair_pig_id,
+                                                      "/",pair_pig_id,"_",
+                                                      periods[per_idx],".rds"))
+                      
+                      pair_pig_pred <- ctmm::predict(pair_pig_ctmm,
+                                                     data=pair_pig_telem,
+                                                     t=main_pig_telem$t)
+                      
+                      main_pair_dist <- TestPairwise(main_pig_telem$x,main_pig_telem$y,
+                                                     pair_pig_pred$x,pair_pig_pred$y,NA)
+                      
+                      for(d in 1:length(cdist)){#distance thresholds
+                        
+                        num_contacts_main[d,l] <- sum(main_pair_dist<cdist[d])
+                        
+                      } #distance thresholds
+                      
+                    } #if pair pig exists
+                    
                   }  #not same pig / hr overlap if statement
                 }  # all pairs for indiv pig
                 
@@ -180,7 +203,6 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
                   
                   #number of contacts per week at distance
                   dist_mat[[w]]$num_contacts[dist_mat[[w]]$animalid==main_pig_id &
-                                               # dist_mat[[per_idx]]$week==w &
                                                dist_mat[[w]]$dist==cdist[d]] <-
                     sum(num_contacts_main[d,],na.rm=T)
                   
@@ -188,7 +210,6 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
                   cd <- num_contacts_main[d,]
                   cd <- cd[!is.na(cd)]
                   dist_mat[[w]]$num_indivs[dist_mat[[w]]$animalid==main_pig_id &
-                                             # dist_mat[[per_idx]]$week==w &
                                              dist_mat[[w]]$dist==cdist[d]] <-
                     sum(cd>0)
                   
@@ -210,14 +231,19 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
     list(dist_mat_all=dist_mat_all)
 }
 
+# contacts_tox <- list()
+# for(t in 1:3){
+#   contacts_tox[[i]] <- contact_from_ctmm(rem_idx = 2,per_idx = t)
+# }
 #trmt/period combinations
 perms <- expand_grid(rem_idx=1:length(rem_typ_folders),per_idx=1:length(periods))
 perms$rem_typ_folder <- rem_typ_folders[perms$rem_idx]
 perms$period <- periods[perms$per_idx]
 perms <- perms %>% filter(!(rem_typ_folder=="aer" & period=="during"))
+perms
 
-cl <- makeCluster(nrow(perms), "SOCK")
-clusterExport(cl, list("periods","rem_typ","cdist","pigs_trt",
+cl <- makeCluster(nrow(perms))
+clusterExport(cl, list("periods","cdist","rem_idx",
                        "rem_typ_folders","perms","akde_files",
                        "cpp_dir","objdir","homedir","ctmm_dir",
                        "hr_pairs",'contact_from_ctmm'))
@@ -227,46 +253,69 @@ system.time(
 )
 stopCluster(cl)
 
-parContacts[[4]]$dist_mat_all
+parContacts <- do.call("rbind.data.frame",parContacts)
 
-contacts_all <- do.call("rbind.data.frame",lapply(1:nrow(perms),function(i)parContacts[[i]]$dist_mat_all))
-contacts_all %>% filter(!is.na(num_contacts))
-contacts_all
 
-pig_sex_age <- georem %>% 
-  group_by(animalid) %>% 
-  dplyr::summarise(age=unique(age),
-            sex=unique(sex))
+# split by rem typ and link to sex
+contacts_aer <- parContacts %>% filter(rem_typ=="aer")
+contacts_tox <- parContacts %>% filter(rem_typ=="tox")
+contacts_trap <- parContacts %>% filter(rem_typ=="trap")
 
-contacts_all <- contacts_all %>% left_join(pig_sex_age) %>% 
-  filter(is.na(sex))
+contacts_aer <- contacts_aer %>% left_join(geo.aer %>% dplyr::select(animalid,sex) %>% distinct())
+contacts_trap <- contacts_trap %>% left_join(geo.trap %>% dplyr::select(animalid,sex) %>% distinct())
+contacts_tox <- contacts_tox %>% left_join(geo.tox %>% dplyr::select(animalid,sex) %>% distinct())
 
-saveRDS(contacts_all,file=paste0(objdir,"/pairwise_contacts.rds"))
+#standardize by number of days in period
+aer_per_days <- geo.aer %>% 
+  group_by(removal.period.akdecalc) %>% 
+  summarise(start=min(date_only),
+            end=max(date_only),
+            period_days=as.numeric(end-start))
 
+trap_per_days <- geo.trap %>% 
+  group_by(removal.period.akdecalc) %>% 
+  summarise(start=min(date_only),
+            end=max(date_only),
+            period_days=as.numeric(end-start))
+
+tox_per_days <- geo.tox %>% 
+  group_by(removal.period.akdecalc) %>% 
+  summarise(start=min(date_only),
+            end=max(date_only),
+            period_days=as.numeric(end-start))
+
+contacts_aer <- contacts_aer %>% rename(removal.period.akdecalc=period) %>% 
+  left_join(aer_per_days %>% select(-c(start,end)))%>%
+  mutate(contacts_per_day=num_contacts/period_days,
+         indivs_per_day=num_indivs/period_days)
+contacts_trap<- contacts_trap %>% rename(removal.period.akdecalc=period) %>% 
+  left_join(trap_per_days %>% select(-c(start,end)))%>%
+  mutate(contacts_per_day=num_contacts/period_days,
+         indivs_per_day=num_indivs/period_days)
+contacts_tox <- contacts_tox %>% rename(removal.period.akdecalc=period) %>% 
+  left_join(tox_per_days %>% select(-c(start,end)))%>%
+  mutate(contacts_per_day=num_contacts/period_days,
+         indivs_per_day=num_indivs/period_days)
+
+#save ouptut
+saveRDS(contacts_aer,file=paste0(objdir,"/pairwise_contacts_aer.rds"))
+saveRDS(contacts_tox,file=paste0(objdir,"/pairwise_contacts_tox.rds"))
+saveRDS(contacts_trap,file=paste0(objdir,"/pairwise_contacts_trap.rds"))
 
 #check
-# parContacts <- readRDS(paste0(objdir,"/pairwise_contacts.rds"))
-# con <- do.call("rbind.data.frame",parContacts)
-# con$period <- factor(con$period,levels=c('before','during','after'))
-# 
-# pig_info <- geo.all %>% 
-#   dplyr::select(animalid,Removal.Type,sex,age) %>% 
-#   distinct()
-# 
-# ctrl <- pig_info %>% filter(Removal.Type=="ctrl")
-# con$rem_typ[con$animalid%in%ctrl$animalid]
-# 
-# 
-# ggplot(con)+
-#   geom_jitter(aes(x=period,y=num_contacts,col=animalid),alpha=0.5,
-#               width=0.1)+
-#   facet_grid(dist~rem_typ)+
-#   guides(col="none")+
-#   theme(text=element_text(size=15))
-# 
-# ggplot(con)+
-#   geom_jitter(aes(x=period,y=num_indivs,col=animalid),alpha=0.5,
-#               width=0.1)+
-#   facet_grid(dist~rem_typ)+
-#   guides(col="none")+
-#   theme(text=element_text(size=15))
+contacts_all <- rbind.data.frame(contacts_aer,contacts_trap,contacts_tox)
+contacts_all$period <- factor(contacts_all$period,levels=c('before','during','after'))
+
+
+ggplot(contacts_all %>% filter(dist==10))+
+  geom_boxplot(aes(x=period,y=num_contacts,col=animalid))+
+  facet_grid(trt_typ~rem_typ)+
+  guides(col="none")+
+  theme(text=element_text(size=15))
+
+ggplot(contacts_all)+
+  geom_jitter(aes(x=period,y=num_indivs,col=animalid),alpha=0.5,
+              width=0.1)+
+  facet_grid(trt_typ~rem_typ)+
+  guides(col="none")+
+  theme(text=element_text(size=15))
