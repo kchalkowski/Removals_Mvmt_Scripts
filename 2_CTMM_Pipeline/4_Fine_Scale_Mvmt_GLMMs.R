@@ -37,7 +37,6 @@
   geo.tox<-readRDS(file.path(objdir,"geotox.rds"))
   geo.trap<-readRDS(file.path(objdir,"geotrap.rds"))
   geo.all <- rbind(geo.aer,geo.tox,geo.trap)
-<<<<<<< HEAD
   
   #identify animals that died in toxicant treatment
   aktox=readRDS(paste0(objdir,"/outdf_akde_tox_corrected.rds"))
@@ -52,8 +51,6 @@
   mesh_cutoff<-1
   spatial_res <- 1000
 }
-=======
->>>>>>> 0acc97c49961b636f21741b2e74ac464373dd4ce
 
 # distance -------------------
 ## formatting distance dfs ----------
@@ -425,7 +422,6 @@ testSpatialAutocorrelation(tox_res_rps2,groupLocations$mX,groupLocations$mY)
 
 saveRDS(res_speed_rps_tox,paste0(results_dir,"res_speed_rps_tox.rds"))
 
-<<<<<<< HEAD
 # contacts - number --------
 parContacts <- readRDS(paste0(objdir,"/pairwise_contacts.rds"))
 
@@ -658,6 +654,4 @@ descdist(tox_res_nind_rps2$fittedResiduals)
 DHARMa::testDispersion(tox_res_nind_rps2)
 
 saveRDS(res_nind_rps_tox,paste0(results_dir,"res_nind_rps_tox.rds"))
-=======
 
->>>>>>> 0acc97c49961b636f21741b2e74ac464373dd4ce
