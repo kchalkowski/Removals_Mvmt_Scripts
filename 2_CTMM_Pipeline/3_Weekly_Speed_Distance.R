@@ -20,7 +20,7 @@ library(RcppArmadillo)
 #Set directories
 # homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
 # homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
-# homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
+ homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
 ctmm_dir <- file.path(homedir,"1_Data","Objects","ctmm_Predictions",fsep=.Platform$file.sep)
 objdir=file.path(homedir,"1_Data","Objects",fsep=.Platform$file.sep)
 
@@ -265,14 +265,12 @@ pig_dist_wk <- pig_dist_all %>%
 
 #formatting 
 #offset to prevent 0's
-dist$weekly_dist_km <- dist$weekly_dist_km +0.0001
-dist$animalid <- factor(dist$animalid)
-dist$sex <- factor(dist$sex)
+pig_dist_wk$weekly_dist_km <- pig_dist_wk$weekly_dist_km +0.0001
+pig_dist_wk$animalid <- factor(pig_dist_wk$animalid)
+pig_dist_wk$sex <- factor(pig_dist_wk$sex)
 
 #trt_ctrl levels
-distaer$trt_ctrl <- factor(distaer$trt_ctrl,levels=c('ctrl','trt'))
-disttox$trt_ctrl <- factor(disttox$trt_ctrl,levels=c('ctrl','trt'))
-disttrap$trt_ctrl <- factor(disttrap$trt_ctrl,levels=c('ctrl','trt'))
+pig_dist_wk$trt_ctrl <- factor(pig_dist_wk$trt_ctrl,levels=c('ctrl','trt'))
 
 saveRDS(pig_dist_wk,paste0(objdir,"/pig_weekly_distance_ctmm.rds"))
 
@@ -288,8 +286,6 @@ pig_dist_wk_trt <- pig_dist_wk %>%
             max=max(weekly_dist_km))
 
 ## speed -------------------------
-# pig_speed_all <- readRDS(paste0(objdir,"/hourly_speed_nifa.rds"))
-#pig_speed_all$rem_typ[pig_speed_all$animalid%in%ctrl_ids$animalid] <- "ctrl"
 
 #add sex
 pig_speed_all <- pig_speed_all %>% left_join(geo.all %>% dplyr::select(sex,animalid) %>% distinct())
@@ -308,11 +304,12 @@ pig_speed_wk <- pig_speed_all %>%
 
 #offset by very small amount
 pig_speed_wk$weekly_md_km_hr <- pig_speed_wk$weekly_md_km_hr + 0.0001
+
+#set factors
 pig_speed_wk$animalid <- factor(pig_speed_wk$animalid)
-
 pig_speed_wk$sex <- factor(pig_speed_wk$sex)
-
 pig_speed_wk$trt_ctrl <- factor(pig_speed_wk$trt_ctrl,levels=c('ctrl','trt'))
 
+#save output
 saveRDS(pig_speed_wk,paste0(objdir,"/pig_weekly_speed_ctmm.rds"))
 
