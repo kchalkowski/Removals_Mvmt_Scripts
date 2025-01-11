@@ -40,7 +40,7 @@ geo.all <- rbind(geo.aer,geo.tox,geo.trap)
 
 #Create summary of pig animalids, removal types, and periods
 pigs_trt <- geo.all %>% 
-  group_by(Removal.Type,removal.period.akdecalc) %>% 
+  dplyr::group_by(Removal.Type,removal.period.akdecalc) %>% 
   reframe(animalid=unique(animalid))%>% 
   filter(!(Removal.Type=="aer" & removal.period.akdecalc=="during"))
 
@@ -52,20 +52,20 @@ trap_id <- pigs_trt %>% filter(Removal.Type=="trap")
 
 #summarize dates by week for aerial removal trt/ctrl
 trt_aer <- geo.aer %>%
-  group_by(removal.period.akdecalc,Removal.Type,week) %>%
-  summarise(week_start = min(date_only),
+  dplyr::group_by(removal.period.akdecalc,Removal.Type,week) %>%
+  dplyr::summarise(week_start = min(date_only),
             week_end = max(date_only))
 
 #summarize dates by week for tox removal trt/ctrl
 trt_tox <- geo.tox %>%
-  group_by(removal.period.akdecalc,Removal.Type,week) %>%
-  summarise(week_start = min(date_only),
+  dplyr::group_by(removal.period.akdecalc,Removal.Type,week) %>%
+  dplyr::summarise(week_start = min(date_only),
             week_end = max(date_only))
 
 #summarize dates by week for trap removal trt/ctrl
 trt_trap <- geo.trap %>%
-  group_by(removal.period.akdecalc,Removal.Type,week) %>%
-  summarise(week_start = min(date_only),
+  dplyr::group_by(removal.period.akdecalc,Removal.Type,week) %>%
+  dplyr::summarise(week_start = min(date_only),
             week_end = max(date_only))
 
 #get vectors for periods/removal type for looping
@@ -131,8 +131,8 @@ for(i in 1:length(rem_typ)){
           traj_xy <- cbind.data.frame(x=traj$x,y=traj$y,date=traj$date,dist=traj$dist)
           
           speed_mat <- traj_xy %>% 
-            group_by(hour=floor_date(date,"hour")) %>% 
-            summarise(hr_dist = sum(dist,na.rm=T),
+            dplyr::group_by(hour=floor_date(date,"hour")) %>% 
+            dplyr::summarise(hr_dist = sum(dist,na.rm=T),
                       mn_x=mean(x,na.rm=T),
                       mn_y=mean(y,na.rm=T)) %>% 
             mutate(animalid=pig_id[j],
@@ -140,12 +140,12 @@ for(i in 1:length(rem_typ)){
                    period=periods[k])
           
           dist_mat <- traj_xy %>% 
-            group_by(hour=floor_date(date,"hour")) %>% 
-            summarise(hr_dist = sum(dist,na.rm=T),
+            dplyr::group_by(hour=floor_date(date,"hour")) %>% 
+            dplyr::summarise(hr_dist = sum(dist,na.rm=T),
                       mn_x=mean(x,na.rm=T),
                       mn_y=mean(y,na.rm=T)) %>% 
-            group_by(day=floor_date(hour,"day")) %>% 
-            summarise(daily_dist_m=sum(hr_dist,na.rm=T),
+            dplyr::group_by(day=floor_date(hour,"day")) %>% 
+            dplyr::summarise(daily_dist_m=sum(hr_dist,na.rm=T),
                       mn_x=mean(mn_x,na.rm=T),
                       mn_y=mean(mn_y,na.rm=T)
                       # mn_m_per_hr=mean(hr_dist),
@@ -204,8 +204,9 @@ for(i in 1:length(rem_typ)){
           
           speed_mat=
             speed_mat %>% 
+            mutate(day=floor_date(hour,"day")) %>%
             dplyr::group_by(week) %>%
-            dplyr::mutate(nd=n()) %>%
+            dplyr::mutate(nd=n_distinct(day)) %>%
             dplyr::filter(nd>=6) %>%
             dplyr::select(!nd)
           
@@ -260,6 +261,7 @@ pig_speed_all <- do.call("rbind.data.frame",pig_speed_per_rem)
 
 #Adjust week numbering
 #Make another function to adjust week intervals
+#geo=pig_speed_all
 adjust_intvals<-function(geo){
   
   for(rem in 1:length(unique(geo$rem_typ))){
@@ -296,14 +298,14 @@ pig_dist_all <- pig_dist_all %>% dplyr::left_join(geo.all %>% dplyr::select(sex,
 
 #per individual per week
 pig_dist_wk <- pig_dist_all %>% 
-  group_by(animalid,rem_typ,trt_ctrl,period,sex,week) %>% 
-  summarise(weekly_dist_m=sum(daily_dist_m),
+  dplyr::group_by(animalid,rem_typ,trt_ctrl,period,sex,week) %>% 
+  dplyr::summarise(weekly_dist_m=sum(daily_dist_m),
             weekly_dist_km=weekly_dist_m/1000,
             mn_x=mean(mn_x),
             mn_y=mean(mn_y)) %>% 
-  filter(!is.na(rem_typ)) %>% 
+  dplyr::filter(!is.na(rem_typ)) %>% 
   dplyr::select(-weekly_dist_m) %>% 
-  rename(Removal.Type=rem_typ,
+  dplyr::rename(Removal.Type=rem_typ,
          removal.period.akdecalc=period,
          mX=mn_x,
          mY=mn_y)
@@ -327,14 +329,14 @@ pig_speed_all <- pig_speed_all %>% left_join(geo.all %>% dplyr::select(sex,anima
 #per individual per week
 pig_speed_wk <- pig_speed_all %>% 
   mutate(hr_dist_km=hr_dist/1000) %>% 
-  group_by(animalid,rem_typ,trt_ctrl,period,sex,week) %>% 
-  summarise(weekly_md_km_hr=median(hr_dist_km),
+  dplyr::group_by(animalid,rem_typ,trt_ctrl,period,sex,week) %>% 
+  dplyr::summarise(weekly_md_km_hr=median(hr_dist_km),
             mX=mean(mn_x),
             mY=mean(mn_y)) %>% 
- filter(!is.na(rem_typ)) %>% 
-  rename(Removal.Type=rem_typ,
+  dplyr::filter(!is.na(rem_typ)) %>% 
+  dplyr::rename(Removal.Type=rem_typ,
          removal.period.akdecalc=period)
-
+#View(pig_speed_wk)
 
 #offset by very small amount
 pig_speed_wk$weekly_md_km_hr <- pig_speed_wk$weekly_md_km_hr + 0.0001
