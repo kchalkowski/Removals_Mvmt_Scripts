@@ -102,7 +102,9 @@ for(i in 1:length(rem_typ)){
   pig_id <- pig_id[!pig_id%in%rem_typ]
   
   #Remove gone pigs
-  pig_id=pig_id[!(pig_id%in%aer_gone|pig_id%in%tox_gone)]
+  if(rem_typ[i]=="aer"){pig_id=pig_id[!(pig_id%in%aer_gone)]}
+  if(rem_typ[i]=="tox"){pig_id=pig_id[!(pig_id%in%tox_gone)]}
+  if(rem_typ[i]=="trap"){pig_id=pig_id[!(pig_id%in%trap_gone)]}
   
   #Remove sat pigs
   pig_id=pig_id[!(pig_id%in%satpigs)]
@@ -300,7 +302,12 @@ adjust_intvals<-function(geo){
 
 pig_dist_all=adjust_intvals(pig_dist_all)
 pig_speed_all=adjust_intvals(pig_speed_all)
-#View(pig_speed_all2[pig_speed_all2$animalid=="48477_S4_S4",])
+
+#View(geo.trap[geo.trap$animalid=="48460_B3_B3",])
+#View(geo.trapd.wk[geo.trapd.wk$animalid=="48460_B3_B3",])
+#View(pig_dist_all[pig_dist_all$animalid=="48460_B3_B3",])
+#View(pig_dist_all2[pig_dist_all2$animalid=="48460_B3_B3",])
+
 # weekly summaries-----------------
 ## distance ----------------
 

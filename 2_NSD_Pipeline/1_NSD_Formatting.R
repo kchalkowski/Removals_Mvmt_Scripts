@@ -37,7 +37,7 @@ for(f in 1:(length(func.list)-1)){
 # Trim incomplete weeks ------------------------------------------------------
 
 #Make function to trim incomplete weeks
-geo.rem=geo.trap
+#geo.rem=geo.trap
 trimwks=function(geo.rem,mindays){
   
   remchk=geo.rem %>% 
@@ -59,7 +59,10 @@ trimwks=function(geo.rem,mindays){
 }
 
 #Make another function to adjust week intervals
+geo.rem=geo.trap
 adjust_intvals<-function(geo.rem){
+  ordergeo=order(geo.rem$datetime)
+  geo.rem=geo.rem[ordergeo,]
   ids=unique(geo.rem$animalid)
   for(i in 1:length(ids)){
     geo.rem_i=geo.rem[geo.rem$animalid==ids[i],]
@@ -70,27 +73,24 @@ adjust_intvals<-function(geo.rem){
       geo.rem[geo.rem$animalid==ids[i]&
               geo.rem$week==key1[k],]$week<-key2[k]
     }
-    return(geo.rem)
+    
   }
+  return(geo.rem)
 }
-
-#
-#View(geo.trap2[geo.trap2$animalid=="48479_T2_T2",])
-#View(geo.trap3[geo.trap3$animalid=="48479_T2_T2"&geo.trap3$removal.period.akdecalc=="after",])
 
 #Trim incomplete weeks
 geo.aer=trimwks(geo.aer,5)
-geo.trap2=trimwks(geo.trap,5)
+geo.trap=trimwks(geo.trap,5)
 geo.tox=trimwks(geo.tox,5)
 
 #Adjust intervals, skip over incomplete weeks
 geo.aer=adjust_intvals(geo.aer)
-geo.trap3=adjust_intvals(geo.trap2)
+geo.trap=adjust_intvals(geo.trap)
 geo.tox=adjust_intvals(geo.tox)
 
 #View summary
 nrow(geo.tox) #315490
-nrow(geo.trap) #588735
+nrow(geo.trap) #589452
 nrow(geo.aer) #225757
 
 # Calculate NSD ----------------------------------------------------------------
