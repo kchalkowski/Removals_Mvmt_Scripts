@@ -52,13 +52,37 @@ geo.toxd.wk=readRDS(file.path(objdir,"geo_toxd_wk.rds"))
 #distaer=readRDS(file.path(objdir,"distaer.rds"))
 #disttrap=readRDS(file.path(objdir,"distrap.rds"))
 #disttox=readRDS(file.path(objdir,"disttox.rds"))
+dist<- readRDS(paste0(objdir,"/pig_weekly_distance_ctmm.rds"))
+
+#subset dfs
+distaer <- dist %>% filter(Removal.Type%in%c('aer')) %>% filter(removal.period.akdecalc!='during') 
+disttox <- dist %>% filter(Removal.Type%in%c('tox')) 
+disttrap <- dist %>% filter(Removal.Type%in%c('trap')) 
+
+#relevel when during isn't recorded
+distaer$removal.period.akdecalc <- factor(distaer$removal.period.akdecalc,
+                                          levels=c('before','after'))
+disttox$removal.period.akdecalc <- factor(disttox$removal.period.akdecalc,
+                                          levels=c('before','during','after'))
+disttrap$removal.period.akdecalc <- factor(disttrap$removal.period.akdecalc,
+                                           levels=c('before','during','after'))
+
 
 #Read in speed data:
-#speedaer=readRDS(file.path(objdir,"speedaer.rds"))
-#speedtrap=readRDS(file.path(objdir,"speedtrap.rds"))
-#speedtox=readRDS(file.path(objdir,"speedtox.rds"))
+speed<- readRDS(paste0(objdir,"/pig_weekly_speed_ctmm.rds"))
 
-dist=readRDS(file.path(objdir,"pig_weekly_distance_ctmm.rds"))
+speedaer <- speed %>% filter(Removal.Type%in%c('aer')) %>% 
+  filter(removal.period.akdecalc!='during') 
+speedtox <- speed %>% filter(Removal.Type%in%c('tox')) 
+speedtrap <- speed %>% filter(Removal.Type%in%c('trap')) 
+
+#relevel when during isn't recorded
+speedaer$removal.period.akdecalc <- factor(speedaer$removal.period.akdecalc,
+                                           levels=c('before','after'))
+speedtox$removal.period.akdecalc <- factor(speedtox$removal.period.akdecalc,
+                                           levels=c('before','during','after'))
+speedtrap$removal.period.akdecalc <- factor(speedtrap$removal.period.akdecalc,
+                                            levels=c('before','during','after'))
 
 
 # Format and join data ---------------------------------------------------------
@@ -74,14 +98,14 @@ geo.trapd.wk2=geo.trapd.wk[,c("animalid","Removal.Type","removal.period.akdecalc
 geo.toxd.wk2=geo.toxd.wk[,c("animalid","Removal.Type","removal.period.akdecalc","week","mNSD")]
 
 #extract cols from distance sets
-distaer2=distaer[,c("animalid","Removal.Type","removal.period.akdecalc","week","weekly_dist_km")]
-disttrap2=disttrap[,c("animalid","Removal.Type","removal.period.akdecalc","week","weekly_dist_km")]
-disttox2=disttox[,c("animalid","Removal.Type","removal.period.akdecalc","week","weekly_dist_km")]
+distaer2=distaer[,c("animalid","trt_ctrl","removal.period.akdecalc","week","weekly_dist_km")]
+disttrap2=disttrap[,c("animalid","trt_ctrl","removal.period.akdecalc","week","weekly_dist_km")]
+disttox2=disttox[,c("animalid","trt_ctrl","removal.period.akdecalc","week","weekly_dist_km")]
 
 #extract cols from speed sets
-speedaer2=speedaer[,c("animalid","Removal.Type","removal.period.akdecalc","week","weekly_md_km_hr")]
-speedtrap2=speedtrap[,c("animalid","Removal.Type","removal.period.akdecalc","week","weekly_md_km_hr")]
-speedtox2=speedtox[,c("animalid","Removal.Type","removal.period.akdecalc","week","weekly_md_km_hr")]
+speedaer2=speedaer[,c("animalid","trt_ctrl","removal.period.akdecalc","week","weekly_md_km_hr")]
+speedtrap2=speedtrap[,c("animalid","trt_ctrl","removal.period.akdecalc","week","weekly_md_km_hr")]
+speedtox2=speedtox[,c("animalid","trt_ctrl","removal.period.akdecalc","week","weekly_md_km_hr")]
 
 #make data frames for formatting
 distaer2<-as.data.frame(distaer2)
@@ -120,8 +144,6 @@ speedaer2$trt=as.character(speedaer2$trt)
 speedtrap2$trt=as.character(speedtrap2$trt)
 speedtox2$trt=as.character(speedtox2$trt)
 
-
-
 #change removal type cols to be treatment or control
 akaer2[,c("trt")][akaer2[,c("trt")]=="aer"]<-"trt"
 aktrap2[,c("trt")][aktrap2[,c("trt")]=="trap"]<-"trt"
@@ -129,24 +151,6 @@ aktox2[,c("trt")][aktox2[,c("trt")]=="tox"]<-"trt"
 geo.aerd.wk2[,c("trt")][geo.aerd.wk2[,c("trt")]=="aer"]<-"trt"
 geo.trapd.wk2[,c("trt")][geo.trapd.wk2[,c("trt")]=="trap"]<-"trt"
 geo.toxd.wk2[,c("trt")][geo.toxd.wk2[,c("trt")]=="tox"]<-"trt"
-
-distaer2[,c("trt")][distaer2[,c("trt")]=="aer"]<-"trt"
-disttrap2[,c("trt")][disttrap2[,c("trt")]=="trap"]<-"trt"
-disttox2[,c("trt")][disttox2[,c("trt")]=="tox"]<-"trt"
-speedaer2[,c("trt")][speedaer2[,c("trt")]=="aer"]<-"trt"
-speedtrap2[,c("trt")][speedtrap2[,c("trt")]=="trap"]<-"trt"
-speedtox2[,c("trt")][speedtox2[,c("trt")]=="tox"]<-"trt"
-
-#weeks numbered differently-- check scripts later,
-#for now just set min to 1
-#pretty sure numbering from single start point rather than for each removal start date
-distaer2$wk=(distaer2$wk-min(distaer2$wk))+1
-disttrap2$wk=(disttrap2$wk-min(disttrap2$wk))+1
-disttox2$wk=(disttox2$wk-min(disttox2$wk))+1
-
-speedaer2$wk=(speedaer2$wk-min(speedaer2$wk))+1
-speedtrap2$wk=(speedtrap2$wk-min(speedtrap2$wk))+1
-speedtox2$wk=(speedtox2$wk-min(speedtox2$wk))+1
 
 #left join to get one df for each removal type
 aer=left_join(geo.aerd.wk2,akaer2,by=c("animalid","trt","per"))
@@ -158,6 +162,10 @@ aer2=left_join(aer,distaer2,by=c("animalid","trt","per","wk"))
 trap2=left_join(trap,disttrap2,by=c("animalid","trt","per","wk"))
 tox2=left_join(tox,disttox2,by=c("animalid","trt","per","wk"))
 
+#left join again to add speed
+aer3=left_join(aer2,speedaer2,by=c("animalid","trt","per","wk"))
+trap3=left_join(trap2,speedtrap2,by=c("animalid","trt","per","wk"))
+tox3=left_join(tox2,speedtox2,by=c("animalid","trt","per","wk"))
 
 #Add removal type columns
 aer$rem<-"aer"
@@ -355,6 +363,51 @@ hr_tox=dat2p %>% filter(rem=="tox") %>%
   theme(legend.position="none")+
   xlab("period")+
   ylab("HR area (km^2)")
+
+
+#* Make distance figures ------------------------------------------------------------
+
+nsd_aer=dat3w %>% filter(rem=="aer") %>%
+  ggplot(., aes(x=dt,y=nsd_med,ymin=nsd_q25,ymax=nsd_q75,color=hex,fill=hex))+
+  scale_color_identity()+
+  scale_fill_identity()+
+  geom_line()+
+  geom_ribbon(alpha=0.2,color=NA)+
+  theme_ipsum()+
+  geom_vline(aes(xintercept=strt),linetype="dashed")+
+  geom_vline(aes(xintercept=end),linetype="dashed")+
+  xlab("date")+
+  scale_x_date(date_breaks = "1 week", date_labels =  "%b-%d")+ 
+  theme(axis.text.x=element_text(angle=60, hjust=1))+
+  ylab("NSD (m^2)")
+
+nsd_trap=dat3w %>% filter(rem=="trap") %>%
+  ggplot(., aes(x=dt,y=nsd_med,ymin=nsd_q25,ymax=nsd_q75,color=hex,fill=hex))+
+  scale_color_identity()+
+  scale_fill_identity()+
+  geom_line()+
+  geom_ribbon(alpha=0.2,color=NA)+
+  theme_ipsum()+
+  geom_vline(aes(xintercept=strt),linetype="dashed")+
+  geom_vline(aes(xintercept=end),linetype="dashed")+
+  xlab("date")+
+  scale_x_date(date_breaks = "2 week", date_labels =  "%b-%d")+ 
+  theme(axis.text.x=element_text(angle=60, hjust=1))+
+  ylab("NSD (m^2)")
+
+nsd_tox=dat3w %>% filter(rem=="tox") %>%
+  ggplot(., aes(x=dt,y=nsd_med,ymin=nsd_q25,ymax=nsd_q75,color=hex,fill=hex))+
+  scale_color_identity()+
+  scale_fill_identity()+
+  geom_line()+
+  geom_ribbon(alpha=0.2,color=NA)+
+  theme_ipsum()+
+  geom_vline(aes(xintercept=strt),linetype="dashed")+
+  geom_vline(aes(xintercept=end),linetype="dashed")+
+  xlab("date")+
+  scale_x_date(date_breaks = "1 week", date_labels =  "%b-%d")+ 
+  theme(axis.text.x=element_text(angle=60, hjust=1))+
+  ylab("NSD (m^2)")
 
 
 # Combine plots --------------------------------------------------------
