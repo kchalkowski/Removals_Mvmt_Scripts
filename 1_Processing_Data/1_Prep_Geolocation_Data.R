@@ -299,6 +299,8 @@ not.selected=c(not.selected,"48476_2_4Y_4Y","85401_2_U_U","85440_E2_E2")
 tox.pig.IDs=tox.pig.IDs[tox.pig.IDs!="86070_H2_H2"]
 not.selected=c(not.selected,"86070_H2_H2")
 
+#Additional trimming: line X, remove designated pigs not meeting duration criteria
+
 #Note:
   #two additional pigs removed from tox dataset later on:
   #85411_C3_C3 and 86075_Y5_Y5, because was not range resident res behavior (therefore could not get akde hr estimate)
@@ -462,6 +464,20 @@ Do.Week.Split<-function(geo.aerd,removal.str,origin.vector){
 geo.aer=Do.Week.Split(geo.aer,"aer",c(aer.origin,aer.origin.after))
 geo.trap=Do.Week.Split(geo.trap,"trap",c(trap.origin,trap.origin.after,trap.origin.during))
 geo.tox=Do.Week.Split(geo.tox,"tox",c(tox.origin,tox.origin.after,tox.origin.during))
+
+#Trim pigs not meeting duration criteria within each period
+trap_id_filter=geo.trap %>% 
+  group_by(animalid,removal.period.akdecalc,week) %>% 
+  dplyr::summarise(minday=n_distinct(jDate)) %>%
+  #weeks that have at least 5 days
+  dplyr::filter(minday>=5) %>%
+  dplyr::group_by(animalid,removal.period.akdecalc) %>%
+  dplyr::summarise(minweek=n_distinct(week)) %>%
+  dplyr::filter(minweek<5) %>%
+  dplyr::select(animalid) %>%
+  as.data.frame()
+
+geo.trap=geo.trap[!(geo.trap$animalid%in%trap_id_filter),]
 
 # Write out data and summaries -------------------------------------------------
 
