@@ -304,18 +304,17 @@ saveRDS(contacts_trap,file=paste0(objdir,"/pairwise_contacts_trap.rds"))
 
 #check
 contacts_all <- rbind.data.frame(contacts_aer,contacts_trap,contacts_tox)
-contacts_all$period <- factor(contacts_all$period,levels=c('before','during','after'))
+contacts_all$removal.period.akdecalc <- factor(contacts_all$removal.period.akdecalc,levels=c('before','during','after'))
 
 
-ggplot(contacts_all %>% filter(dist==10))+
-  geom_boxplot(aes(x=period,y=num_contacts,col=animalid))+
-  facet_grid(trt_typ~rem_typ)+
+ggplot(contacts_all)+
+  geom_boxplot(aes(x=removal.period.akdecalc,y=contacts_per_day,fill=trt_typ))+
+  facet_grid(dist~rem_typ)+
   guides(col="none")+
   theme(text=element_text(size=15))
 
 ggplot(contacts_all)+
-  geom_jitter(aes(x=period,y=num_indivs,col=animalid),alpha=0.5,
-              width=0.1)+
-  facet_grid(trt_typ~rem_typ)+
+  geom_boxplot(aes(x=removal.period.akdecalc,y=indivs_per_day,fill=trt_typ))+
+  facet_grid(dist~rem_typ)+
   guides(col="none")+
   theme(text=element_text(size=15))
