@@ -23,6 +23,7 @@ library(RcppArmadillo)
  homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
 ctmm_dir <- file.path(homedir,"1_Data","Objects","ctmm_Predictions",fsep=.Platform$file.sep)
 objdir=file.path(homedir,"1_Data","Objects",fsep=.Platform$file.sep)
+input=file.path(home,"1_Data","Input",fsep=.Platform$file.sep)
 
 #Load geolocation data
 # georem <- read.csv("./1_Data/Objects/geo_remtyp_period.csv")
@@ -87,6 +88,10 @@ aer_gone=c("48476_2_4Y_4Y","85401_2_U_U","85440_E2_E2")
 #Remove tox pig with no data in 'before' period
 tox_gone=c("86070_H2_H2")
 
+#get IDs of satellite pigs-- these will have produced bad CTMMS
+geo=readRDS(file.path(input,"geo.rds",fsep=.Platform$file.sep)) #geolocations, tidied and filtered
+satpigs=unique(geo[geo$data_from=="satellite",]$animalid)
+
 #start loop through folders, get predictions
 for(i in 1:length(rem_typ)){
   
@@ -96,6 +101,9 @@ for(i in 1:length(rem_typ)){
   
   #Remove gone pigs
   pig_id=pig_id[!(pig_id%in%aer_gone|pig_id%in%tox_gone)]
+  
+  #Remove sat pigs
+  pig_id=pig_id[!(pig_id%in%satpigs)]
   
   #initialize empty lists
   pig_dist_per_rem[[i]] <- list()
@@ -263,7 +271,8 @@ pig_speed_all <- do.call("rbind.data.frame",pig_speed_per_rem)
 #Make another function to adjust week intervals
 #geo=pig_speed_all
 adjust_intvals<-function(geo){
-  
+  ordergeo=order(as.data.frame(geo)[,1])
+  geo=geo[ordergeo,]
   for(rem in 1:length(unique(geo$rem_typ))){
   geo.rem=geo[geo$rem_typ==unique(geo$rem_typ)[rem],]
   ids=unique(geo.rem$animalid)
@@ -289,7 +298,7 @@ adjust_intvals<-function(geo){
 
 pig_dist_all=adjust_intvals(pig_dist_all)
 pig_speed_all=adjust_intvals(pig_speed_all)
-
+#View(pig_speed_all2[pig_speed_all2$animalid=="48477_S4_S4",])
 # weekly summaries-----------------
 ## distance ----------------
 
