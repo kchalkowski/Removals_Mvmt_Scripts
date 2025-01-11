@@ -165,7 +165,7 @@ for(i in 1:length(rem_typ)){
             trt_week <- trt_trap
           }
 
-          
+          #Get weeks
           speed_mat$week <- sapply(1:nrow(speed_mat),function(x){
             wk <- unique(trt_week$week[trt_week$week_start<=as.Date(speed_mat$hour[x]) &
                                        trt_week$week_end>=as.Date(speed_mat$hour[x]) &
@@ -194,6 +194,22 @@ for(i in 1:length(rem_typ)){
             return(wk)
           })
           
+          #filter out weeks that have less than 6 days of data
+          dist_mat=
+            dist_mat %>% 
+            dplyr::group_by(week) %>%
+            dplyr::mutate(nd=n()) %>%
+            dplyr::filter(nd>=6) %>%
+            dplyr::select(!nd)
+          
+          speed_mat=
+            speed_mat %>% 
+            dplyr::group_by(week) %>%
+            dplyr::mutate(nd=n()) %>%
+            dplyr::filter(nd>=6) %>%
+            dplyr::select(!nd)
+          
+          #combine into list
           if(!is.data.frame(pig_dist_per_rem[[i]][[k]])){
             
             pig_dist_per_rem[[i]][[k]] <- dist_mat
@@ -214,8 +230,11 @@ for(i in 1:length(rem_typ)){
                                                            speed_mat)
           }
         } #ctmm file exists
+        
       } #pig id loop
+      
     } #skip aerial during
+    
   } # treatment period loop
   
   pig_dist_per_rem[[i]] <- do.call("rbind.data.frame",pig_dist_per_rem[[i]])
@@ -229,19 +248,45 @@ for(i in 1:length(rem_typ)){
   pig_dist_per_rem[[i]]$trt_ctrl="trt"
   pig_speed_per_rem[[i]]$trt_ctrl="trt"
   
-  #pig_dist_per_rem[[i]][[which(pig_dist_per_rem[[i]]$animalid%in%ctrl_id)]]
-  #nrow(pig_dist_per_rem[[i]][!(pig_dist_per_rem[[i]]$animalid%in%as.character(ctrl_id$animalid)),])
-  #nrow(pig_dist_per_rem[[i]][pig_dist_per_rem[[i]]$animalid%in%as.character(ctrl_id$animalid),])
+  #set control pigs in trt_ctrl-- if animalidid in ctrl_id
   pig_dist_per_rem[[i]]$trt_ctrl[pig_dist_per_rem[[i]]$animalid%in%as.character(ctrl_id$animalid)]<-"ctrl"
   pig_speed_per_rem[[i]]$trt_ctrl[pig_speed_per_rem[[i]]$animalid%in%as.character(ctrl_id$animalid)]<-"ctrl"
 
   } # removal type loop
 
+#rbind everything
 pig_dist_all <- do.call("rbind.data.frame",pig_dist_per_rem)           
 pig_speed_all <- do.call("rbind.data.frame",pig_speed_per_rem)   
 
-pig_dist_all <- pig_dist_all %>% filter(!is.na(rem_typ))
-pig_speed_all <- pig_speed_all %>% filter(!is.na(rem_typ))
+#Adjust week numbering
+#Make another function to adjust week intervals
+adjust_intvals<-function(geo){
+  
+  for(rem in 1:length(unique(geo$rem_typ))){
+  geo.rem=geo[geo$rem_typ==unique(geo$rem_typ)[rem],]
+  ids=unique(geo.rem$animalid)
+  for(i in 1:length(ids)){
+    geo.rem_i=geo.rem[geo.rem$animalid==ids[i],]
+    key1=unique(geo.rem_i$week)
+    key2=1:length(key1)
+    
+    for(k in 1:length(key1)){
+      geo.rem[geo.rem$animalid==ids[i]&
+                geo.rem$week==key1[k],]$week<-key2[k]
+    }
+    
+  } #for animalid
+  if(rem==1){
+    geo.out=geo.rem
+  } else{
+    geo.out=rbind(geo.out,geo.rem)
+  }
+  } #for remtype
+    return(geo.out)
+}
+
+pig_dist_all=adjust_intvals(pig_dist_all)
+pig_speed_all=adjust_intvals(pig_speed_all)
 
 # weekly summaries-----------------
 ## distance ----------------
@@ -273,17 +318,6 @@ pig_dist_wk$sex <- factor(pig_dist_wk$sex)
 pig_dist_wk$trt_ctrl <- factor(pig_dist_wk$trt_ctrl,levels=c('ctrl','trt'))
 
 saveRDS(pig_dist_wk,paste0(objdir,"/pig_weekly_distance_ctmm.rds"))
-
-#entire treatment group per week -----------
-pig_dist_wk_trt <- pig_dist_wk %>% 
-  group_by(week,Removal.Type,removal.period.akdecalc) %>% 
-  summarise(md=median(weekly_dist_km),
-            sd=sqrt(var(weekly_dist_km)),
-            mn=mean(weekly_dist_km),
-            lci=mn - 1.96*(sd/sqrt(n())),
-            uci=mn + 1.96*(sd/sqrt(n())),
-            min=min(weekly_dist_km),
-            max=max(weekly_dist_km))
 
 ## speed -------------------------
 

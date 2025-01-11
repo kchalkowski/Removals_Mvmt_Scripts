@@ -38,6 +38,7 @@ for(f in 1:length(func.list)){
 
 #Make function to trim incomplete weeks
 trimwks=function(geo.rem,mindays){
+  
   remchk=geo.rem %>% 
     group_by(animalid,removal.period.akdecalc,week) %>% 
     dplyr::summarise(minday=n_distinct(jDate)) %>%
