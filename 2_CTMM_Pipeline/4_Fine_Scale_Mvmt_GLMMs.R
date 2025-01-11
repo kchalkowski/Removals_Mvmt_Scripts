@@ -50,7 +50,7 @@
   #set mesh cutoff for all spatial models
   mesh_cutoff<-1
   spatial_res <- 1000
-}
+
 
 # distance -------------------
 ## formatting distance dfs ----------
@@ -423,29 +423,29 @@ testSpatialAutocorrelation(tox_res_rps2,groupLocations$mX,groupLocations$mY)
 saveRDS(res_speed_rps_tox,paste0(results_dir,"res_speed_rps_tox.rds"))
 
 # contacts - number --------
-parContacts <- readRDS(paste0(objdir,"/pairwise_contacts.rds"))
+## aerial ------------
+conaer <- readRDS(paste0(objdir,"/pairwise_contacts_aer.rds"))
 
-con <- do.call("rbind.data.frame",parContacts)
-con$period <- factor(con$period,levels=c('before','during','after'))
+conaer$Removal.Type <- 
+  factor(conaer$trt_typ,levels=c('ctrl','trt'))
+conaer$removal.period.akdecalc <- 
+  factor(conaer$removal.period.akdecalc,levels=c('before','after'))
 
-con <- con %>% rename(Removal.Type=rem_typ,
-               removal.period.akdecalc=period)
+#distance thresholds
+ggplot(conaer)+
+  geom_histogram(aes(x=contacts_per_day))+
+  facet_wrap(.~dist)
 
-conaer <- con %>% filter(Removal.Type=='aer')
-contox <- con %>% filter(Removal.Type=='tox')
-contrap <- con %>% filter(Removal.Type=='trap')
+conaer <- conaer %>% filter(dist==10)
 
-res_ncon_rp_aer=glmmTMB(num_contacts~(1|animalid)+
-                        removal.period.akdecalc,
-                        data=conaer,
-                        family=nbinom12(link="log"))
+#offset for 0's 
+conaer$contacts_per_day<- conaer$contacts_per_day+0.0001
 
-#aerial ------
 ## removal type * period -----
-res_ncon_rp_aer=glmmTMB(num_contacts~(1|animalid)+
+res_ncon_rp_aer=glmmTMB(contacts_per_day~(1|animalid)+
                         Removal.Type*removal.period.akdecalc,
                          data=conaer,
-                         family=poisson(link='log')
+                         family=Gamma(link="log")
                         # family=nbinom12(link="log")
                         )
 
