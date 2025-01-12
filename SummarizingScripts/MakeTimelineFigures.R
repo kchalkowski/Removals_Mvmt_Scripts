@@ -36,7 +36,8 @@ objdir=file.path(home,"1_Data","Objects",fsep=.Platform$file.sep)
 if(!dir.exists(file.path(home,"3_Output","Area_GLM_Results",fsep=.Platform$file.sep))){
   dir.create(file.path(home,"3_Output","Area_GLM_Results",fsep=.Platform$file.sep))
 }
-outdir=file.path(home,"3_Output","Area_GLM_Results",fsep=.Platform$file.sep)
+outdir=file.path(home,"3_Output","Timeline_Plots",fsep=.Platform$file.sep)
+if(!dir.exists(outdir)){dir.create(outdir)}
 
 #Read in area data
 akaer=readRDS(file.path(objdir,"outdf_akde_aer_corrected_f.rds",fsep=.Platform$file.sep))
@@ -226,7 +227,7 @@ dat2p=dat2p[complete.cases(dat2p),]
 tox.hex="#FF985A"
 trap.hex="#FF57A9"
 aer.hex="#822AFF"
-ctrl.hex="#FFD065"
+ctrl.hex="#ffc400"
 
 dat2w$hex=NA
 dat2w[,c("hex")][dat2w[,c("rem")]=="aer"]<-aer.hex
@@ -310,8 +311,11 @@ ggplot(., aes(x=dt,y=nsd_med,ymin=nsd_q25,ymax=nsd_q75,color=hex,fill=hex))+
   scale_color_identity()+
   scale_fill_identity()+
   geom_line()+
-  geom_ribbon(alpha=0.2,color=NA)+
-  theme_ipsum()+
+  geom_ribbon(alpha=0.3,color=NA)+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   geom_vline(aes(xintercept=strt),linetype="dashed")+
   geom_vline(aes(xintercept=end),linetype="dashed")+
   xlab("date")+
@@ -324,12 +328,15 @@ nsd_trap=dat3w %>% filter(rem=="trap") %>%
   scale_color_identity()+
   scale_fill_identity()+
   geom_line()+
-  geom_ribbon(alpha=0.2,color=NA)+
-  theme_ipsum()+
+  geom_ribbon(alpha=0.3,color=NA)+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   geom_vline(aes(xintercept=strt),linetype="dashed")+
   geom_vline(aes(xintercept=end),linetype="dashed")+
   xlab("date")+
-  scale_x_date(date_breaks = "2 week", date_labels =  "%b-%d")+ 
+  scale_x_date(date_breaks = "3 weeks", date_labels =  "%b-%d")+ 
   theme(axis.text.x=element_text(angle=60, hjust=1))+
   ylab("NSD (m^2)")
 
@@ -338,12 +345,15 @@ nsd_tox=dat3w %>% filter(rem=="tox") %>%
   scale_color_identity()+
   scale_fill_identity()+
   geom_line()+
-  geom_ribbon(alpha=0.2,color=NA)+
-  theme_ipsum()+
+  geom_ribbon(alpha=0.3,color=NA)+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   geom_vline(aes(xintercept=strt),linetype="dashed")+
   geom_vline(aes(xintercept=end),linetype="dashed")+
   xlab("date")+
-  scale_x_date(date_breaks = "1 week", date_labels =  "%b-%d")+ 
+  scale_x_date(date_breaks = "2 weeks", date_labels =  "%b-%d")+ 
   theme(axis.text.x=element_text(angle=60, hjust=1))+
   ylab("NSD (m^2)")
 
@@ -354,7 +364,10 @@ hr_aer=dat2p %>% filter(rem=="aer") %>%
   geom_point(aes(y=med),size=3,position = position_dodge(width = 0.1))+
   geom_segment(aes(y=q25),linewidth=1,position = position_dodge(width = 0.1))+
   scale_color_identity()+
-  theme_ipsum()+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   theme(legend.position="none")+
   xlab("period")+
   ylab("HR area (km^2)")
@@ -364,7 +377,10 @@ hr_trap=dat2p %>% filter(rem=="trap") %>%
   geom_point(aes(y=med),size=3,position = position_dodge(width = 0.1))+
   geom_segment(aes(y=q25),linewidth=1,position = position_dodge(width = 0.1))+
   scale_color_identity()+
-  theme_ipsum()+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   theme(legend.position="none")+
   xlab("period")+
   ylab("HR area (km^2)")
@@ -374,7 +390,10 @@ hr_tox=dat2p %>% filter(rem=="tox") %>%
   geom_point(aes(y=med),size=3,position = position_dodge(width = 0.1))+
   geom_segment(aes(y=q25),linewidth=1,position = position_dodge(width = 0.1))+
   scale_color_identity()+
-  theme_ipsum()+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   theme(legend.position="none")+
   xlab("period")+
   ylab("HR area (km^2)")
@@ -387,8 +406,11 @@ dist_aer=dat3w %>% filter(rem=="aer") %>%
   scale_color_identity()+
   scale_fill_identity()+
   geom_line()+
-  geom_ribbon(alpha=0.2,color=NA)+
-  theme_ipsum()+
+  geom_ribbon(alpha=0.3,color=NA)+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   geom_vline(aes(xintercept=strt),linetype="dashed")+
   geom_vline(aes(xintercept=end),linetype="dashed")+
   xlab("date")+
@@ -401,12 +423,15 @@ dist_trap=dat3w %>% filter(rem=="trap") %>%
   scale_color_identity()+
   scale_fill_identity()+
   geom_line()+
-  geom_ribbon(alpha=0.2,color=NA)+
-  theme_ipsum()+
+  geom_ribbon(alpha=0.3,color=NA)+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   geom_vline(aes(xintercept=strt),linetype="dashed")+
   geom_vline(aes(xintercept=end),linetype="dashed")+
   xlab("date")+
-  scale_x_date(date_breaks = "2 week", date_labels =  "%b-%d")+ 
+  scale_x_date(date_breaks = "3 weeks", date_labels =  "%b-%d")+ 
   theme(axis.text.x=element_text(angle=60, hjust=1))+
   ylab("dist (m)")
 
@@ -415,12 +440,15 @@ dist_tox=dat3w %>% filter(rem=="tox") %>%
   scale_color_identity()+
   scale_fill_identity()+
   geom_line()+
-  geom_ribbon(alpha=0.2,color=NA)+
-  theme_ipsum()+
+  geom_ribbon(alpha=0.3,color=NA)+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   geom_vline(aes(xintercept=strt),linetype="dashed")+
   geom_vline(aes(xintercept=end),linetype="dashed")+
   xlab("date")+
-  scale_x_date(date_breaks = "1 week", date_labels =  "%b-%d")+ 
+  scale_x_date(date_breaks = "2 weeks", date_labels =  "%b-%d")+ 
   theme(axis.text.x=element_text(angle=60, hjust=1))+
   ylab("dist (m)")
 
@@ -431,8 +459,11 @@ speed_aer=dat3w %>% filter(rem=="aer") %>%
   scale_color_identity()+
   scale_fill_identity()+
   geom_line()+
-  geom_ribbon(alpha=0.2,color=NA)+
-  theme_ipsum()+
+  geom_ribbon(alpha=0.3,color=NA)+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   geom_vline(aes(xintercept=strt),linetype="dashed")+
   geom_vline(aes(xintercept=end),linetype="dashed")+
   xlab("date")+
@@ -445,45 +476,47 @@ speed_trap=dat3w %>% filter(rem=="trap") %>%
   scale_color_identity()+
   scale_fill_identity()+
   geom_line()+
-  geom_ribbon(alpha=0.2,color=NA)+
-  theme_ipsum()+
+  geom_ribbon(alpha=0.3,color=NA)+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   geom_vline(aes(xintercept=strt),linetype="dashed")+
   geom_vline(aes(xintercept=end),linetype="dashed")+
   xlab("date")+
-  scale_x_date(date_breaks = "1 week", date_labels =  "%b-%d")+ 
+  scale_x_date(date_breaks = "3 weeks", date_labels =  "%b-%d")+ 
   theme(axis.text.x=element_text(angle=60, hjust=1))+
   ylab("speed (km/hr)")
 
-speed_tox=dat3w %>% filter(rem=="tox") %>%
+speed_tox=
+  dat3w %>% filter(rem=="tox") %>%
   ggplot(., aes(x=dt,y=speed_med,ymin=speed_q25,ymax=speed_q75,color=hex,fill=hex))+
   scale_color_identity()+
   scale_fill_identity()+
   geom_line()+
-  geom_ribbon(alpha=0.2,color=NA)+
-  theme_ipsum()+
+  geom_ribbon(alpha=0.3,color=NA)+
+  theme_ipsum(grid=FALSE,
+              axis_text_size=10,
+              axis_title_size=10,
+              plot_margin = margin(5, 5, 5, 5))+
   geom_vline(aes(xintercept=strt),linetype="dashed")+
   geom_vline(aes(xintercept=end),linetype="dashed")+
   xlab("date")+
-  scale_x_date(date_breaks = "1 week", date_labels =  "%b-%d")+ 
+  scale_x_date(date_breaks = "2 weeks", date_labels =  "%b-%d")+ 
   theme(axis.text.x=element_text(angle=60, hjust=1))+
   ylab("speed (km/hr)")
 
-dist_aer
-dist_trap
-dist_tox
-
-speed_aer
-speed_trap
-speed_tox
-
-nsd_aer
-nsd_trap
-nsd_tox
-
 # Combine plots --------------------------------------------------------
 
-cowplot::plot_grid(hr_aer,nsd_aer,ncol=2)
-cowplot::plot_grid(hr_trap,nsd_trap,ncol=2)
-cowplot::plot_grid(hr_tox,nsd_tox,ncol=2)
+aerpl=cowplot::plot_grid(hr_aer,NULL,nsd_aer,NULL,speed_aer,NULL,dist_aer,ncol=1,rel_heights=c(1,0.05,1,0.05,1,0.05,1))
+trappl=cowplot::plot_grid(hr_trap,NULL,nsd_trap,NULL,speed_trap,NULL,dist_trap,ncol=1,rel_heights=c(1,0.05,1,0.05,1,0.05,1))
+toxpl=cowplot::plot_grid(hr_tox,NULL,nsd_tox,NULL,speed_tox,NULL,dist_tox,ncol=1,rel_heights=c(1,0.05,1,0.05,1,0.05,1))
 
+ggsave(file.path(outdir,"aer_timeline.png",fsep=.Platform$file.sep),plot=aerpl,height=11,units="in")
+ggsave(file.path(outdir,"trap_timeline.png",fsep=.Platform$file.sep),plot=trappl,height=11,units="in")
+ggsave(file.path(outdir,"tox_timeline.png",fsep=.Platform$file.sep),plot=toxpl,height=11,units="in")
+
+#Try combining
+allpl=cowplot::plot_grid(aerpl,NULL,trappl,NULL,toxpl,ncol=5,rel_widths=c(1,0.02,1,0.02,1))
+ggsave(file.path(outdir,"mvmt_timeline.png",fsep=.Platform$file.sep),plot=allpl,width=6.5,height=9,units="in")
 
