@@ -50,7 +50,6 @@
   #set mesh cutoff for all spatial models
   mesh_cutoff<-1
   spatial_res <- 1000
-}
 
 # distance -------------------
 ## formatting distance dfs ----------
@@ -77,7 +76,7 @@ res_aer=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc,
 simout_aer <- simulateResiduals(fittedModel = res_aer, plot = F)
 res_aer2 = recalculateResiduals(simout_aer, group = distaer$week,rotation="estimated")
 testTemporalAutocorrelation(res_aer2, time = unique(distaer$week))
-#no temporal autocorrelation
+#no temporal autocorrelation, p=0.054
 
 #sex 
 res_aer=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
@@ -85,14 +84,14 @@ res_aer=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex
 simout_aer <- simulateResiduals(fittedModel = res_aer, plot = F)
 res_aer2 = recalculateResiduals(simout_aer, group = distaer$week,rotation="estimated")
 testTemporalAutocorrelation(res_aer2, time = unique(distaer$week))
-#no temporal autocorrelation
+#no temporal autocorrelation, p=0.055
 
 res_trap=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc,
                  data=disttrap,family=Gamma(link="log"))
 simout_trap <- simulateResiduals(fittedModel = res_trap, plot = F)
 res_trap2 = recalculateResiduals(simout_trap, group = disttrap$week,rotation="estimated")
 testTemporalAutocorrelation(res_trap2, time = unique(disttrap$week))
-#no temporal autocorrelation (p=0.06386)
+#no temporal autocorrelation, p=0.29
 
 #sex
 res_trap=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
@@ -100,21 +99,21 @@ res_trap=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc*se
 simout_trap <- simulateResiduals(fittedModel = res_trap, plot = F)
 res_trap2 = recalculateResiduals(simout_trap, group = disttrap$week,rotation="estimated")
 testTemporalAutocorrelation(res_trap2, time = unique(disttrap$week))
-#no temporal autocorrelation (p=0.21)
+#no temporal autocorrelation, p=0.29
 
 res_tox=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc,
                 data=disttox,family=Gamma(link="log"))
 simout_tox <- simulateResiduals(fittedModel = res_tox, plot = F)
 res_tox2 = recalculateResiduals(simout_tox, group = disttox$week,rotation="estimated")
 testTemporalAutocorrelation(res_tox2, time = unique(disttox$week))
-#no temporal autocorrelation (p=0.5547)
+#no temporal autocorrelation, p=0.58
 
 res_tox=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
                 data=disttox,family=Gamma(link="log"))
 simout_tox <- simulateResiduals(fittedModel = res_tox, plot = F)
 res_tox2 = recalculateResiduals(simout_tox, group = disttox$week,rotation="estimated")
 testTemporalAutocorrelation(res_tox2, time = unique(disttox$week))
-#no temporal autocorrelation (p=0.6306)
+#no temporal autocorrelation, p=0.27
 
 ## spatial autocorrelation test ------------------
 aer_test=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc,
@@ -123,7 +122,7 @@ aer_test_resid <- simulateResiduals(aer_test)
 aer_groupLocations = aggregate(distaer[,c("mX","mY")], list(distaer$animalid), mean)
 aer_test_resid2 = recalculateResiduals(aer_test_resid, group = distaer$animalid, rotation="estimated")
 testSpatialAutocorrelation(aer_test_resid2,aer_groupLocations$mX, aer_groupLocations$mY)
-# no spatial autocorrelation, p=0.12
+# spatial autocorrelation, p=0.012
 
 #sex
 aer_test=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
@@ -132,7 +131,7 @@ aer_test_resid <- simulateResiduals(aer_test)
 aer_test_resid2 = recalculateResiduals(aer_test_resid, group = distaer$animalid, rotation="estimated")
 aer_groupLocations = aggregate(distaer[,c("mX","mY")], list(distaer$animalid, distaer$sex), mean)
 DHARMa::testSpatialAutocorrelation(aer_test_resid2,aer_groupLocations$mX, aer_groupLocations$mY)
-# no spatial autocorrelation, p=0.64
+# no spatial autocorrelation, p=0.99
 
 trap_test=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc,
                   data=disttrap,family=Gamma(link="log"))
@@ -140,7 +139,7 @@ trap_test_resid <- simulateResiduals(trap_test)
 trap_groupLocations = aggregate(disttrap[,c("mX","mY")], list(disttrap$animalid), mean)
 trap_test_resid2 = recalculateResiduals(trap_test_resid, group = disttrap$animalid, rotation="estimated")
 testSpatialAutocorrelation(trap_test_resid2,trap_groupLocations$mX, trap_groupLocations$mY)
-#no spatial autocorrelation, p=0.45
+#no spatial autocorrelation, p=0.15
 
 #sex 
 trap_test=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
@@ -148,7 +147,7 @@ trap_test=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc*s
 trap_test_resid <- simulateResiduals(trap_test)
 trap_test_resid2 = recalculateResiduals(trap_test_resid, group = disttrap$animalid, rotation="estimated")
 testSpatialAutocorrelation(trap_test_resid2,trap_groupLocations$mX, trap_groupLocations$mY)
-#no spatial autocorrelation, p=0.75
+#no spatial autocorrelation, p=0.17
 
 tox_test=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc,
                  data=disttox,family=Gamma(link="log"))
@@ -156,7 +155,7 @@ tox_test_resid <- simulateResiduals(tox_test)
 tox_groupLocations = aggregate(disttox[,c("mX","mY")], list(disttox$animalid), mean)
 tox_test_resid2 = recalculateResiduals(tox_test_resid, group = disttox$animalid, rotation="estimated")
 testSpatialAutocorrelation(tox_test_resid2,tox_groupLocations$mX, tox_groupLocations$mY)
-#no spatial autocorrelation (p=0.17)
+#spatial autocorrelation, p=0.0006
 
 #sex
 tox_test=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
@@ -164,10 +163,13 @@ tox_test=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc*se
 tox_test_resid <- simulateResiduals(tox_test)
 tox_test_resid2 = recalculateResiduals(tox_test_resid, group = disttox$animalid, rotation="estimated")
 testSpatialAutocorrelation(tox_test_resid2,tox_groupLocations$mX, tox_groupLocations$mY)
-#no spatial autocorrelation, p=0.92
+#no spatial autocorrelation, p=0.49
 
-#Autocorrelation conclusions:
-#no spatial or temporal autocorrelation needed for any distance models
+## distance autocorrelation conclusions ----------------
+  #Temporal autocorrelation: none
+  #Spatial autocorrelation:
+    #aerial removal*period model
+    #tox removal*period model
 
 ## fit models ------------------
 
@@ -249,7 +251,7 @@ res_aers=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc,
 simout_aers <- simulateResiduals(fittedModel = res_aers, plot = F)
 res_aers2 = recalculateResiduals(simout_aers, group = speedaer$week,rotation="estimated")
 testTemporalAutocorrelation(res_aers2, time = unique(speedaer$week))
-# no temporal autocorrelation
+# no temporal autocorrelation, p=0.41
 
 #sex
 res_aers=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
@@ -257,14 +259,14 @@ res_aers=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc*s
 simout_aers <- simulateResiduals(fittedModel = res_aers, plot = F)
 res_aers2 = recalculateResiduals(simout_aers, group = speedaer$week,rotation="estimated")
 testTemporalAutocorrelation(res_aers2, time = unique(speedaer$week))
-# no temporal autocorrelation
+# no temporal autocorrelation, p=0.49
 
 res_traps=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc,
                   data=speedtrap,family=Gamma(link='log'))
 simout_traps <- simulateResiduals(fittedModel = res_traps, plot = F)
 res_traps2 = recalculateResiduals(simout_traps, group = speedtrap$week,rotation="estimated")
 testTemporalAutocorrelation(res_traps2, time = unique(speedtrap$week))
-#no temporal autocorrelation
+#no temporal autocorrelation, p=0.88
 
 #sex
 res_traps=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
@@ -272,14 +274,14 @@ res_traps=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc*
 simout_traps <- simulateResiduals(fittedModel = res_traps, plot = F)
 res_traps2 = recalculateResiduals(simout_traps, group = speedtrap$week,rotation="estimated")
 testTemporalAutocorrelation(res_traps2, time = unique(speedtrap$week))
-#no temporal autocorrelation
+#no temporal autocorrelation, p=0.43
 
 res_toxs=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc,
                  data=speedtox,family=Gamma(link='log'))
 simout_toxs <- simulateResiduals(fittedModel = res_toxs, plot = F)
 res_toxs2 = recalculateResiduals(simout_toxs, group = speedtox$week,rotation="estimated")
 testTemporalAutocorrelation(res_toxs2, time = unique(speedtox$week))
-# no temporal autocorrelation
+# temporal autocorrelation, p=0.04
 
 #sex
 res_toxs=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
@@ -287,16 +289,17 @@ res_toxs=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc*s
 simout_toxs <- simulateResiduals(fittedModel = res_toxs, plot = F)
 res_toxs2 = recalculateResiduals(simout_toxs, group = speedtox$week,rotation="estimated")
 testTemporalAutocorrelation(res_toxs2, time = unique(speedtox$week))
-#no temporal autocorrelation
+#no temporal autocorrelation, p=0.08
 
 ## spatial autocorrelation test ------------------
+## aerial
 aer_tests=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc,
                   data=speedaer,family=Gamma(link='log'))
 aer_test_resids <- simulateResiduals(aer_tests)
 aer_groupLocations_sp = aggregate(speedaer[,c("mX","mY")], list(speedaer$animalid), mean)
 aer_test_resids2 = recalculateResiduals(aer_test_resids, group = speedaer$animalid, rotation="estimated")
 testSpatialAutocorrelation(aer_test_resids2,aer_groupLocations_sp$mX, aer_groupLocations_sp$mY)
-# no spatial autocorrelation, p=0.09
+# spatial autocorrelation, p=0.034
 
 #sex
 aer_tests=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
@@ -304,7 +307,7 @@ aer_tests=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc*
 aer_test_resids <- simulateResiduals(aer_tests)
 aer_test_resids2 = recalculateResiduals(aer_test_resids, group = speedaer$animalid, rotation="estimated")
 testSpatialAutocorrelation(aer_test_resids2,aer_groupLocations_sp$mX, aer_groupLocations_sp$mY)
-# no spatial autocorrelation
+# no spatial autocorrelation, p=0.57
 
 trap_tests=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc,
                    data=speedtrap,family=Gamma(link='log'))
@@ -312,7 +315,7 @@ trap_test_resids <- simulateResiduals(trap_tests)
 trap_groupLocations_sp = aggregate(speedtrap[,c("mX","mY")], list(speedtrap$animalid), mean)
 trap_test_resids2 = recalculateResiduals(trap_test_resids, group = speedtrap$animalid, rotation="estimated")
 testSpatialAutocorrelation(trap_test_resids2,trap_groupLocations_sp$mX, trap_groupLocations_sp$mY)
-#no spatial autocorrelation
+#no spatial autocorrelation, p=0.93
 
 #sex
 trap_tests=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
@@ -320,7 +323,7 @@ trap_tests=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc
 trap_test_resids <- simulateResiduals(trap_tests)
 trap_test_resids2 = recalculateResiduals(trap_test_resids, group = speedtrap$animalid, rotation="estimated")
 testSpatialAutocorrelation(trap_test_resids2,trap_groupLocations_sp$mX, trap_groupLocations_sp$mY)
-#no spatial autocorrelation
+#no spatial autocorrelation, p=0.99
 
 tox_tests=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc,
                   data=speedtox,family=Gamma(link='log'))
@@ -328,17 +331,22 @@ tox_test_resids <- simulateResiduals(tox_tests)
 tox_groupLocations_sp = aggregate(speedtox[,c("mX","mY")], list(speedtox$animalid), mean)
 tox_test_resids2 = recalculateResiduals(tox_test_resids, group = speedtox$animalid, rotation="estimated")
 testSpatialAutocorrelation(tox_test_resids2,tox_groupLocations_sp$mX, tox_groupLocations_sp$mY)
-# spatial autocorrelation, p=0.001
+# spatial autocorrelation, p=0.002
 
 tox_tests=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc*sex,
                   data=speedtox,family=Gamma(link='log'))
 tox_test_resids <- simulateResiduals(tox_tests)
 tox_test_resids2 = recalculateResiduals(tox_test_resids, group = speedtox$animalid, rotation="estimated")
 testSpatialAutocorrelation(tox_test_resids2,tox_groupLocations_sp$mX, tox_groupLocations_sp$mY)
-# spatial autocorrelation, p=0.0013
+# spatial autocorrelation, p=0.034
 
-#Autocorrelation conclusions:
-#only spatial autocorr needed for tox speed models
+## speed autocorrelation conclusions --------
+  #Temporal autocorrelation:
+    #tox removal*period model
+  #Spatial autocorrelation:
+    #aerial removal*period model
+    #tox removal*period model
+    #tox removal*period*sex model
 
 ## fit glmms ------------------
 

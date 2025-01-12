@@ -20,7 +20,7 @@ library(RcppArmadillo)
 #Set directories
 # homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
 # homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
- homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
+homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
 ctmm_dir <- file.path(homedir,"1_Data","Objects","ctmm_Predictions",fsep=.Platform$file.sep)
 objdir=file.path(homedir,"1_Data","Objects",fsep=.Platform$file.sep)
 input=file.path(homedir,"1_Data","Input",fsep=.Platform$file.sep)
