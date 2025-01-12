@@ -345,16 +345,17 @@ saveRDS(pig_dist_wk,paste0(objdir,"/pig_weekly_distance_ctmm.rds"))
 pig_speed_all <- pig_speed_all %>% left_join(geo.all %>% dplyr::select(sex,animalid) %>% distinct())
 
 #per individual per week
+#removing week from group_by to summarize by period instead
+  #doing this bc had too much difficulty resolving temporal autocorrelation in tox removal/period model
 pig_speed_wk <- pig_speed_all %>% 
   mutate(hr_dist_km=hr_dist/1000) %>% 
-  dplyr::group_by(animalid,rem_typ,trt_ctrl,period,sex,week) %>% 
+  dplyr::group_by(animalid,rem_typ,trt_ctrl,period,sex) %>% 
   dplyr::summarise(weekly_md_km_hr=median(hr_dist_km),
             mX=mean(mn_x),
             mY=mean(mn_y)) %>% 
   dplyr::filter(!is.na(rem_typ)) %>% 
   dplyr::rename(Removal.Type=rem_typ,
          removal.period.akdecalc=period)
-#View(pig_speed_wk)
 
 #offset by very small amount
 pig_speed_wk$weekly_md_km_hr <- pig_speed_wk$weekly_md_km_hr + 0.0001
