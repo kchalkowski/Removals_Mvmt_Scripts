@@ -248,10 +248,11 @@ models=c("res.rp_aer",
 # * Format model prediction df -----------
 for(i in 1:length(mods)){
   #i=1
-  coefs=summary(mods[[i]])$coef$cond
-  tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","removal.period.akdecalc")))
-  if(length(grep("facet",colnames(tmp)))==0){
+  if(length(grep("rps",models[i]))==0){
+    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","removal.period.akdecalc")))
     tmp$facet=NA
+  } else{
+    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","removal.period.akdecalc","sex")))
   }
   tmp$model=models[i]
   
@@ -339,8 +340,32 @@ allc$alpha[allc$`Pr(>|z|)`<0.05]<-1
 
 # Combine full parameter tables -----------------------------------------------------------
 for(i in 1:length(mods)){
-  df=broom.mixed::tidy(mods[[i]])
+  if(class(mods[[i]])=="sdmTMB"){
+    df=broom.mixed::tidy(mods[[i]])
+    df$statistic=df$estimate/df$std.error
+    df$p.value=exp(-0.717*df$statistic-0.416*df$statistic^2)
+    df<-as.data.frame(df)
+  }
+  
+  #add statistic, p value
+  if(class(mods[[i]])=="glmmTMB"){
+    df=broom.mixed::tidy(mods[[i]])
+    #df$model=models[i]
+    df=df[df$effect=="fixed",]
+    #term, estimate, std error, statistic, p value
+    df=df[,c("term","estimate","std.error","statistic","p.value")]
+    df<-as.data.frame(df)
+    
+  }
+  
   df$model=models[i]
+  
+  if(i==1){
+    parms=df
+  } else{
+    parms=rbind(parms,df)
+  }
+  
 }
 
 # Save model output -----------------------------------------------------------
@@ -348,5 +373,5 @@ for(i in 1:length(mods)){
 if(!dir.exists(file.path(outdir,"Model_Output"))){dir.create(file.path(outdir,"Model_Output"))}
 saveRDS(preds,file.path(outdir,"Model_Output","nsd_preds.rds"))
 saveRDS(allc,file.path(outdir,"Model_Output","nsd_intxns.rds"))
-saveRDS(df,file.path(outdir,"Model_Output","nsd_full_param.rds"))
+saveRDS(parms,file.path(outdir,"Model_Output","nsd_full_param.rds"))
 
