@@ -157,8 +157,8 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
             #   }
             # }
               
-            for(k in 1:2){
-            # for(k in 1:length(main_pigs_rem_trt)){ # each indiv in treatment/ctrl group
+            # for(k in 1:2){
+            for(k in 1:length(main_pigs_rem_trt)){ # each indiv in treatment/ctrl group
               
               main_pig_id <- main_pigs_rem_trt[k]
               
@@ -193,8 +193,8 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
                 pairs_tmp <- unique(c(unique(main_pig_pairs$id_1),unique(main_pig_pairs$id_2)))
                 pairs_tmp <- pairs_tmp[which(pairs_tmp!=main_pig_id)]
                 
-                for(l in 1:2){
-                # for(l in 1:length(pairs_tmp)){ # all pairs for indiv pig
+                # for(l in 1:2){
+                for(l in 1:length(pairs_tmp)){ # all pairs for indiv pig
                   
                   pair_pig_id <- pairs_tmp[l]
                     
@@ -275,7 +275,7 @@ perms
 
 
 cl <- makeCluster(nrow(perms))
-clusterExport(cl, list("periods","cdist","rem_idx",
+clusterExport(cl, list("periods","cdist",
                        "rem_typ_folders","perms",#"akde_files",
                        "sat_pigs",
                        "cpp_dir","objdir","homedir","ctmm_dir",
