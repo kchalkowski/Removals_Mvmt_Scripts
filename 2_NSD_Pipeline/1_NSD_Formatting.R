@@ -30,14 +30,16 @@ geo.trap<-readRDS(file.path(objdir,"geotrap.rds"))
 
 #source needed functions
 func.list=list.files(file.path(home,"2_Scripts","Functions",fsep=.Platform$file.sep),full.names=TRUE)
-for(f in 1:length(func.list)){
+for(f in 1:(length(func.list)-1)){
   source(func.list[f])
 }
 
 # Trim incomplete weeks ------------------------------------------------------
 
 #Make function to trim incomplete weeks
+#geo.rem=geo.trap
 trimwks=function(geo.rem,mindays){
+  
   remchk=geo.rem %>% 
     group_by(animalid,removal.period.akdecalc,week) %>% 
     dplyr::summarise(minday=n_distinct(jDate)) %>%
@@ -57,7 +59,10 @@ trimwks=function(geo.rem,mindays){
 }
 
 #Make another function to adjust week intervals
+geo.rem=geo.trap
 adjust_intvals<-function(geo.rem){
+  ordergeo=order(geo.rem$datetime)
+  geo.rem=geo.rem[ordergeo,]
   ids=unique(geo.rem$animalid)
   for(i in 1:length(ids)){
     geo.rem_i=geo.rem[geo.rem$animalid==ids[i],]
@@ -68,24 +73,24 @@ adjust_intvals<-function(geo.rem){
       geo.rem[geo.rem$animalid==ids[i]&
               geo.rem$week==key1[k],]$week<-key2[k]
     }
-    return(geo.rem)
+    
   }
+  return(geo.rem)
 }
 
 #Trim incomplete weeks
-geo.aer=trimwks(geo.aer,6)
-geo.trap=trimwks(geo.trap,6)
-geo.tox=trimwks(geo.tox,6)
+geo.aer=trimwks(geo.aer,5)
+geo.trap=trimwks(geo.trap,5)
+geo.tox=trimwks(geo.tox,5)
 
 #Adjust intervals, skip over incomplete weeks
 geo.aer=adjust_intvals(geo.aer)
 geo.trap=adjust_intvals(geo.trap)
 geo.tox=adjust_intvals(geo.tox)
 
-
 #View summary
 nrow(geo.tox) #315490
-nrow(geo.trap) #588735
+nrow(geo.trap) #589452
 nrow(geo.aer) #225757
 
 # Calculate NSD ----------------------------------------------------------------

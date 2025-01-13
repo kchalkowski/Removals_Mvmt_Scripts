@@ -20,9 +20,10 @@ library(RcppArmadillo)
 #Set directories
 # homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
 # homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
- homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
+homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
 ctmm_dir <- file.path(homedir,"1_Data","Objects","ctmm_Predictions",fsep=.Platform$file.sep)
 objdir=file.path(homedir,"1_Data","Objects",fsep=.Platform$file.sep)
+input=file.path(homedir,"1_Data","Input",fsep=.Platform$file.sep)
 
 #Load geolocation data
 # georem <- read.csv("./1_Data/Objects/geo_remtyp_period.csv")
@@ -40,7 +41,7 @@ geo.all <- rbind(geo.aer,geo.tox,geo.trap)
 
 #Create summary of pig animalids, removal types, and periods
 pigs_trt <- geo.all %>% 
-  group_by(Removal.Type,removal.period.akdecalc) %>% 
+  dplyr::group_by(Removal.Type,removal.period.akdecalc) %>% 
   reframe(animalid=unique(animalid))%>% 
   filter(!(Removal.Type=="aer" & removal.period.akdecalc=="during"))
 
@@ -52,20 +53,20 @@ trap_id <- pigs_trt %>% filter(Removal.Type=="trap")
 
 #summarize dates by week for aerial removal trt/ctrl
 trt_aer <- geo.aer %>%
-  group_by(removal.period.akdecalc,Removal.Type,week) %>%
-  summarise(week_start = min(date_only),
+  dplyr::group_by(removal.period.akdecalc,Removal.Type,week) %>%
+  dplyr::summarise(week_start = min(date_only),
             week_end = max(date_only))
 
 #summarize dates by week for tox removal trt/ctrl
 trt_tox <- geo.tox %>%
-  group_by(removal.period.akdecalc,Removal.Type,week) %>%
-  summarise(week_start = min(date_only),
+  dplyr::group_by(removal.period.akdecalc,Removal.Type,week) %>%
+  dplyr::summarise(week_start = min(date_only),
             week_end = max(date_only))
 
 #summarize dates by week for trap removal trt/ctrl
 trt_trap <- geo.trap %>%
-  group_by(removal.period.akdecalc,Removal.Type,week) %>%
-  summarise(week_start = min(date_only),
+  dplyr::group_by(removal.period.akdecalc,Removal.Type,week) %>%
+  dplyr::summarise(week_start = min(date_only),
             week_end = max(date_only))
 
 #get vectors for periods/removal type for looping
@@ -86,6 +87,12 @@ pig_dist_per_rem <- pig_speed_per_rem <- list()
 aer_gone=c("48476_2_4Y_4Y","85401_2_U_U","85440_E2_E2")
 #Remove tox pig with no data in 'before' period
 tox_gone=c("86070_H2_H2")
+#Remove trap pigs that didn't meet duration criteria
+trap_gone=c("48479_T2_T2","85411_C3_C3","85454_1W_1W")
+
+#get IDs of satellite pigs-- these will have produced bad CTMMS
+geo=readRDS(file.path(input,"geo.rds",fsep=.Platform$file.sep)) #geolocations, tidied and filtered
+satpigs=unique(geo[geo$data_from=="satellite",]$animalid)
 
 #start loop through folders, get predictions
 for(i in 1:length(rem_typ)){
@@ -95,7 +102,12 @@ for(i in 1:length(rem_typ)){
   pig_id <- pig_id[!pig_id%in%rem_typ]
   
   #Remove gone pigs
-  pig_id=pig_id[!(pig_id%in%aer_gone|pig_id%in%tox_gone)]
+  if(rem_typ[i]=="aer"){pig_id=pig_id[!(pig_id%in%aer_gone)]}
+  if(rem_typ[i]=="tox"){pig_id=pig_id[!(pig_id%in%tox_gone)]}
+  if(rem_typ[i]=="trap"){pig_id=pig_id[!(pig_id%in%trap_gone)]}
+  
+  #Remove sat pigs
+  pig_id=pig_id[!(pig_id%in%satpigs)]
   
   #initialize empty lists
   pig_dist_per_rem[[i]] <- list()
@@ -131,8 +143,8 @@ for(i in 1:length(rem_typ)){
           traj_xy <- cbind.data.frame(x=traj$x,y=traj$y,date=traj$date,dist=traj$dist)
           
           speed_mat <- traj_xy %>% 
-            group_by(hour=floor_date(date,"hour")) %>% 
-            summarise(hr_dist = sum(dist,na.rm=T),
+            dplyr::group_by(hour=floor_date(date,"hour")) %>% 
+            dplyr::summarise(hr_dist = sum(dist,na.rm=T),
                       mn_x=mean(x,na.rm=T),
                       mn_y=mean(y,na.rm=T)) %>% 
             mutate(animalid=pig_id[j],
@@ -140,12 +152,12 @@ for(i in 1:length(rem_typ)){
                    period=periods[k])
           
           dist_mat <- traj_xy %>% 
-            group_by(hour=floor_date(date,"hour")) %>% 
-            summarise(hr_dist = sum(dist,na.rm=T),
+            dplyr::group_by(hour=floor_date(date,"hour")) %>% 
+            dplyr::summarise(hr_dist = sum(dist,na.rm=T),
                       mn_x=mean(x,na.rm=T),
                       mn_y=mean(y,na.rm=T)) %>% 
-            group_by(day=floor_date(hour,"day")) %>% 
-            summarise(daily_dist_m=sum(hr_dist,na.rm=T),
+            dplyr::group_by(day=floor_date(hour,"day")) %>% 
+            dplyr::summarise(daily_dist_m=sum(hr_dist,na.rm=T),
                       mn_x=mean(mn_x,na.rm=T),
                       mn_y=mean(mn_y,na.rm=T)
                       # mn_m_per_hr=mean(hr_dist),
@@ -165,7 +177,7 @@ for(i in 1:length(rem_typ)){
             trt_week <- trt_trap
           }
 
-          
+          #Get weeks
           speed_mat$week <- sapply(1:nrow(speed_mat),function(x){
             wk <- unique(trt_week$week[trt_week$week_start<=as.Date(speed_mat$hour[x]) &
                                        trt_week$week_end>=as.Date(speed_mat$hour[x]) &
@@ -194,6 +206,23 @@ for(i in 1:length(rem_typ)){
             return(wk)
           })
           
+          #filter out weeks that have less than 6 days of data
+          dist_mat=
+            dist_mat %>% 
+            dplyr::group_by(week) %>%
+            dplyr::mutate(nd=n()) %>%
+            dplyr::filter(nd>=5) %>%
+            dplyr::select(!nd)
+          
+          speed_mat=
+            speed_mat %>% 
+            mutate(day=floor_date(hour,"day")) %>%
+            dplyr::group_by(week) %>%
+            dplyr::mutate(nd=n_distinct(day)) %>%
+            dplyr::filter(nd>=5) %>%
+            dplyr::select(!nd)
+          
+          #combine into list
           if(!is.data.frame(pig_dist_per_rem[[i]][[k]])){
             
             pig_dist_per_rem[[i]][[k]] <- dist_mat
@@ -214,8 +243,11 @@ for(i in 1:length(rem_typ)){
                                                            speed_mat)
           }
         } #ctmm file exists
+        
       } #pig id loop
+      
     } #skip aerial during
+    
   } # treatment period loop
   
   pig_dist_per_rem[[i]] <- do.call("rbind.data.frame",pig_dist_per_rem[[i]])
@@ -229,19 +261,52 @@ for(i in 1:length(rem_typ)){
   pig_dist_per_rem[[i]]$trt_ctrl="trt"
   pig_speed_per_rem[[i]]$trt_ctrl="trt"
   
-  #pig_dist_per_rem[[i]][[which(pig_dist_per_rem[[i]]$animalid%in%ctrl_id)]]
-  #nrow(pig_dist_per_rem[[i]][!(pig_dist_per_rem[[i]]$animalid%in%as.character(ctrl_id$animalid)),])
-  #nrow(pig_dist_per_rem[[i]][pig_dist_per_rem[[i]]$animalid%in%as.character(ctrl_id$animalid),])
+  #set control pigs in trt_ctrl-- if animalidid in ctrl_id
   pig_dist_per_rem[[i]]$trt_ctrl[pig_dist_per_rem[[i]]$animalid%in%as.character(ctrl_id$animalid)]<-"ctrl"
   pig_speed_per_rem[[i]]$trt_ctrl[pig_speed_per_rem[[i]]$animalid%in%as.character(ctrl_id$animalid)]<-"ctrl"
 
   } # removal type loop
 
+#rbind everything
 pig_dist_all <- do.call("rbind.data.frame",pig_dist_per_rem)           
 pig_speed_all <- do.call("rbind.data.frame",pig_speed_per_rem)   
 
-pig_dist_all <- pig_dist_all %>% filter(!is.na(rem_typ))
-pig_speed_all <- pig_speed_all %>% filter(!is.na(rem_typ))
+#Adjust week numbering
+#Make another function to adjust week intervals
+#geo=pig_speed_all
+adjust_intvals<-function(geo){
+  ordergeo=order(as.data.frame(geo)[,1])
+  geo=geo[ordergeo,]
+  for(rem in 1:length(unique(geo$rem_typ))){
+  geo.rem=geo[geo$rem_typ==unique(geo$rem_typ)[rem],]
+  ids=unique(geo.rem$animalid)
+  for(i in 1:length(ids)){
+    geo.rem_i=geo.rem[geo.rem$animalid==ids[i],]
+    key1=unique(geo.rem_i$week)
+    key2=1:length(key1)
+    
+    for(k in 1:length(key1)){
+      geo.rem[geo.rem$animalid==ids[i]&
+                geo.rem$week==key1[k],]$week<-key2[k]
+    }
+    
+  } #for animalid
+  if(rem==1){
+    geo.out=geo.rem
+  } else{
+    geo.out=rbind(geo.out,geo.rem)
+  }
+  } #for remtype
+    return(geo.out)
+}
+
+pig_dist_all=adjust_intvals(pig_dist_all)
+pig_speed_all=adjust_intvals(pig_speed_all)
+
+#View(geo.trap[geo.trap$animalid=="48460_B3_B3",])
+#View(geo.trapd.wk[geo.trapd.wk$animalid=="48460_B3_B3",])
+#View(pig_dist_all[pig_dist_all$animalid=="48460_B3_B3",])
+#View(pig_dist_all2[pig_dist_all2$animalid=="48460_B3_B3",])
 
 # weekly summaries-----------------
 ## distance ----------------
@@ -251,14 +316,14 @@ pig_dist_all <- pig_dist_all %>% dplyr::left_join(geo.all %>% dplyr::select(sex,
 
 #per individual per week
 pig_dist_wk <- pig_dist_all %>% 
-  group_by(animalid,rem_typ,trt_ctrl,period,sex,week) %>% 
-  summarise(weekly_dist_m=sum(daily_dist_m),
+  dplyr::group_by(animalid,rem_typ,trt_ctrl,period,sex,week) %>% 
+  dplyr::summarise(weekly_dist_m=sum(daily_dist_m),
             weekly_dist_km=weekly_dist_m/1000,
             mn_x=mean(mn_x),
             mn_y=mean(mn_y)) %>% 
-  filter(!is.na(rem_typ)) %>% 
+  dplyr::filter(!is.na(rem_typ)) %>% 
   dplyr::select(-weekly_dist_m) %>% 
-  rename(Removal.Type=rem_typ,
+  dplyr::rename(Removal.Type=rem_typ,
          removal.period.akdecalc=period,
          mX=mn_x,
          mY=mn_y)
@@ -274,33 +339,23 @@ pig_dist_wk$trt_ctrl <- factor(pig_dist_wk$trt_ctrl,levels=c('ctrl','trt'))
 
 saveRDS(pig_dist_wk,paste0(objdir,"/pig_weekly_distance_ctmm.rds"))
 
-#entire treatment group per week -----------
-pig_dist_wk_trt <- pig_dist_wk %>% 
-  group_by(week,Removal.Type,removal.period.akdecalc) %>% 
-  summarise(md=median(weekly_dist_km),
-            sd=sqrt(var(weekly_dist_km)),
-            mn=mean(weekly_dist_km),
-            lci=mn - 1.96*(sd/sqrt(n())),
-            uci=mn + 1.96*(sd/sqrt(n())),
-            min=min(weekly_dist_km),
-            max=max(weekly_dist_km))
-
 ## speed -------------------------
 
 #add sex
 pig_speed_all <- pig_speed_all %>% left_join(geo.all %>% dplyr::select(sex,animalid) %>% distinct())
 
 #per individual per week
+#removing week from group_by to summarize by period instead
+  #doing this bc had too much difficulty resolving temporal autocorrelation in tox removal/period model
 pig_speed_wk <- pig_speed_all %>% 
   mutate(hr_dist_km=hr_dist/1000) %>% 
-  group_by(animalid,rem_typ,trt_ctrl,period,sex,week) %>% 
-  summarise(weekly_md_km_hr=median(hr_dist_km),
+  dplyr::group_by(animalid,rem_typ,trt_ctrl,period,sex) %>% 
+  dplyr::summarise(weekly_md_km_hr=median(hr_dist_km),
             mX=mean(mn_x),
             mY=mean(mn_y)) %>% 
- filter(!is.na(rem_typ)) %>% 
-  rename(Removal.Type=rem_typ,
+  dplyr::filter(!is.na(rem_typ)) %>% 
+  dplyr::rename(Removal.Type=rem_typ,
          removal.period.akdecalc=period)
-
 
 #offset by very small amount
 pig_speed_wk$weekly_md_km_hr <- pig_speed_wk$weekly_md_km_hr + 0.0001
