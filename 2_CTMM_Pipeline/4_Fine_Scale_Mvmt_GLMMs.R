@@ -572,10 +572,10 @@ for(i in 1:length(mods)){
   #add statistic, p value
   if(class(mods[[i]])=="glmmTMB"){
     df=broom.mixed::tidy(mods[[i]])
-    df$model=models[i]
+    #df$model=models[i]
     df=df[df$effect=="fixed",]
     #term, estimate, std error, statistic, p value
-    df=df[,c(4:8)]
+    df=df[,c("term","estimate","std.error","statistic","p.value")]
     df<-as.data.frame(df)
     
   }
@@ -596,7 +596,6 @@ if(!dir.exists(file.path(outdir,"Model_Output"))){dir.create(file.path(outdir,"M
 saveRDS(preds,file.path(outdir,"Model_Output","spdist_preds.rds"))
 saveRDS(allc,file.path(outdir,"Model_Output","spdist_intxns.rds"))
 saveRDS(parms,file.path(outdir,"Model_Output","spdist_full_param.rds"))
-
 
 # contacts - number --------
 ## aerial ------------

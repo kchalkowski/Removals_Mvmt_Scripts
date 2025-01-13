@@ -248,10 +248,11 @@ models=c("res.rp_aer",
 # * Format model prediction df -----------
 for(i in 1:length(mods)){
   #i=1
-  coefs=summary(mods[[i]])$coef$cond
-  tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","removal.period.akdecalc")))
-  if(length(grep("facet",colnames(tmp)))==0){
+  if(length(grep("rps",models[i]))==0){
+    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","removal.period.akdecalc")))
     tmp$facet=NA
+  } else{
+    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","removal.period.akdecalc","sex")))
   }
   tmp$model=models[i]
   
@@ -349,10 +350,10 @@ for(i in 1:length(mods)){
   #add statistic, p value
   if(class(mods[[i]])=="glmmTMB"){
     df=broom.mixed::tidy(mods[[i]])
-    df$model=models[i]
+    #df$model=models[i]
     df=df[df$effect=="fixed",]
     #term, estimate, std error, statistic, p value
-    df=df[,c(4:8)]
+    df=df[,c("term","estimate","std.error","statistic","p.value")]
     df<-as.data.frame(df)
     
   }
