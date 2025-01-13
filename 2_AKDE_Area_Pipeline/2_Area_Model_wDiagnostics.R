@@ -31,7 +31,7 @@ objdir=file.path(home,"1_Data","Objects",fsep=.Platform$file.sep)
 if(!dir.exists(file.path(home,"3_Output","Area_GLM_Results",fsep=.Platform$file.sep))){
   dir.create(file.path(home,"3_Output","Area_GLM_Results",fsep=.Platform$file.sep))
 }
-outdir=file.path(home,"3_Output","Area_GLM_Results",fsep=.Platform$file.sep)
+outdir=file.path(home,"3_Output",fsep=.Platform$file.sep)
 
 #Read input objects
 akaer=readRDS(file.path(objdir,"outdf_akde_aer_corrected_f.rds",fsep=.Platform$file.sep))
@@ -41,7 +41,7 @@ aktox=readRDS(file.path(objdir,"outdf_akde_aktox_corrected_f.rds",fsep=.Platform
 #source needed functions
 funcdir<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/2_Scripts/Functions"
 func.list=list.files(funcdir,full.names=TRUE)
-for(f in 1:length(func.list)){
+for(f in 1:(length(func.list)-1)){
   source(func.list[f])
 }
 
@@ -170,89 +170,52 @@ res.rp_trap=glmmTMB(area.est ~ Removal.Type*period + exp(pos + 0 | animalid), da
 res.rp_tox=glmmTMB(area.est ~ Removal.Type*period + (1|animalid), data=aktox,family=Gamma(link=log))
 res.rps_tox=glmmTMB(area.est ~ Removal.Type*period*sex + (1|animalid), data=aktox,family=Gamma(link=log))
 
-#Save model objects
-saveRDS(res.rp_aer,file.path(objdir,"Models","res_area_rp_aer.rds",fsep=.Platform$file.sep))
-saveRDS(res.rps_aer,file.path(objdir,"Models","res_area_rps_aer.rds",fsep=.Platform$file.sep))
-saveRDS(res.rp_trap,file.path(objdir,"Models","res_area_rp_trap.rds",fsep=.Platform$file.sep))
-saveRDS(res.rp_tox,file.path(objdir,"Models","res_area_rp_tox.rds",fsep=.Platform$file.sep))
-saveRDS(res.rps_tox,file.path(objdir,"Models","res_area_rps_tox.rds",fsep=.Platform$file.sep))
 
+# Format model info -----------------------------------------------------------
 
+mods<-list(res.rp_aer,
+           res.rps_aer,
+           res.rp_trap,
+           res.rp_tox,
+           res.rps_tox)
+models=c("res.rp_aer",
+         "res.rps_aer",
+         "res.rp_trap",
+         "res.rp_tox",
+         "res.rps_tox")
 
+# * Format model prediction df -----------
+for(i in 1:length(mods)){
+  #i=1
+  if(length(grep("rps",models[i]))==0){
+    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","period")))
+    tmp$facet=NA
+  } else{
+    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","period","sex")))
+  }
+  tmp$model=models[i]
+  
+  if(i==1){
+    preds=tmp
+  } else{
+    preds=rbind(preds,tmp)
+  }
+  
+}
 
+#make colnames more informative
+colnames(preds)[c(1,6,7)]<-c("trt","per","sex")
 
+#Make rem column based on model
+preds$rem=NA
+preds$rem[grep("aer",preds$model)]<-"aer"
+preds$rem[grep("trap",preds$model)]<-"trap"
+preds$rem[grep("tox",preds$model)]<-"tox"
 
+#make response column
+preds$response="area"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Make results figures ------------------------------------------------------------
-# Below needs tidying with new structure
-
-tox.tmp <- ggeffects::predict_response(tox.topmodel, terms=c("Removal.Type","period","sex"))
-tox.tmp.df=as.data.frame(tox.tmp)
-
-ggplot(tox.tmp.df,aes(x=x,yend=conf.high,group=group,color=group))+
-  geom_point(aes(y=predicted),size=6,position = position_dodge(width = 0.2))+
-  geom_segment(aes(y=sqrt(conf.low)),linewidth=3,position = position_dodge(width = 0.2))+
-  #geom_line(aes(y=sqrt(predicted),group=x),linewidth=2,position = position_dodge(width = 0.2))+
-  theme_ipsum(axis_title_size=15,axis_text_size=18,strip_text_size =18,base_size=15)+
-  theme(legend.text=element_text(size=15))+
-  scale_color_manual(name="Removal\ntreatment",
-                     values=c("#FFD065","#FF7D2E"))+
-  ylab("Home range area (km2)")+
-  xlab("Removal period")+
-  facet_wrap(~facet)
-ggsave(paste0(outdir,"tox_prediction_figure.png"),bg="white",height=4,width=6,units="in")
-
-#season
-tox.tmpdt0 <- ggeffects::predict_response(tox.topmodeldt0, terms=c("Removal.Type","period","sex"))
-tox.tmp.df.dt0=as.data.frame(tox.tmpdt0)
-
-ggplot(tox.tmp.df.dt0,aes(x=x,yend=conf.high,group=group,color=group))+
-  geom_point(aes(y=predicted),size=6,position = position_dodge(width = 0.2))+
-  geom_segment(aes(y=sqrt(conf.low)),linewidth=3,position = position_dodge(width = 0.2))+
-  #geom_line(aes(y=sqrt(predicted),group=x),linewidth=2,position = position_dodge(width = 0.2))+
-  theme_ipsum(axis_title_size=15,axis_text_size=18,strip_text_size =18,base_size=15)+
-  theme(legend.text=element_text(size=15))+
-  scale_color_manual(name="Removal\ntreatment",
-                     values=c("#FFD065","#FF7D2E"))+
-  ylab("Home range area (km2)")+
-  xlab("Removal period")+
-  facet_wrap(~facet)
-
-ggsave(paste0(outdir,"toxdt0_prediction_figure.png"),bg="white",height=4,width=6,units="in")
-
-tidy.toxmodel=broom.mixed::tidy(tox.topmodel) %>% as.data.frame()
-tidy.trapmodel=broom.mixed::tidy(trap.topmodel) %>% as.data.frame()
-tidy.aermodel=broom.mixed::tidy(aer.topmodel) %>% as.data.frame()
-tidy.toxdt0model=broom.mixed::tidy(tox.topmodeldt0) %>% as.data.frame()
-
-tidy.toxmodel$removal="tox"
-tidy.trapmodel$removal="trap"
-tidy.aermodel$removal="aer"
-tidy.toxdt0model$removal="toxdt0"
-
-allparms=rbind(tidy.toxmodel, 
-               tidy.trapmodel, 
-               tidy.aermodel,
-               tidy.toxdt0model)
-
-
-
-
-# Format model data ------------------------------------------------------------
+# Pull interactions table ------------------------------------------------------
 
 #Loop through model objects
 for(i in 1:length(mods)){
@@ -262,23 +225,28 @@ for(i in 1:length(mods)){
   
   #Make table with just interaction effect, std.error, p value
   coefs2=as.data.frame(coefs[grep(":",rownames(coefs)),c(1,2,4),drop=FALSE])
-  if(nrow(coefs2)>1){
-    coefs2=as.data.frame(coefs2[grep("Removal.Type",rownames(coefs2)),,drop=FALSE])
-    coefs2=as.data.frame(coefs2[grep("period",rownames(coefs2)),,drop=FALSE])
-  }
-  
-  coefs2$model=names(mods)[i]
-  coefs2$effect=rownames(coefs2)
-  rownames(coefs2)=NULL
-  
-  if(i==1){
-    allc=coefs2
-  } else{
-    allc=rbind(allc,coefs2)
-  }
-  
-  
-}
+  if(nrow(coefs2)!=0){
+    
+    if(nrow(coefs2)>1){
+      coefs2=as.data.frame(coefs2[grep("Removal.Type",rownames(coefs2)),,drop=FALSE])
+      coefs2=as.data.frame(coefs2[grep("period",rownames(coefs2)),,drop=FALSE])
+    }
+    
+    
+    coefs2$model=models[i]
+    coefs2$effect=rownames(coefs2)
+    rownames(coefs2)=NULL
+    
+    if(i==1){
+      allc=coefs2
+    } else{
+      allc=rbind(allc,coefs2)
+    }
+    
+    
+    
+  } #if nrow coef not 0
+} #for loop
 
 #period
 allc$period=NA
@@ -297,142 +265,51 @@ allc$trt[grep("trap",allc$effect)]<-"trap"
 allc$trt[grep("tox",allc$effect)]<-"tox"
 
 #get response type
-allc$response=NA
-allc$response[grep("area",allc$model)]<-"area"
-allc$response[grep("NSD",allc$model)]<-"NSD"
+allc$response="area"
 
 #Remove ugly effect column
 allc=allc[,-which(colnames(allc)=="effect")]
 
-# Format data for plotting -----------------------------------------------------
-#Make col to adjust alpha transparency to p val
-allc$alpha=0.1
-allc$alpha[allc$`Pr(>|z|)`<0.05]<-1
-
 #change sex NA
 allc$sex[is.na(allc$sex)]<-"whole"
 
-#Make keys
-allc$rem_per_sex=paste0(allc$trt,allc$period,allc$sex)
+#subset to only significant interactions
+allc$alpha=0.1
+allc$alpha[allc$`Pr(>|z|)`<0.05]<-1
 
-#pivot wider for m/f estimates
-#a1=allc %>% pivot_wider(id_cols=c(period,trt,response),names_from=sex,values_from=c(Estimate,alpha))
+# Combine full parameter tables -----------------------------------------------------------
+for(i in 1:length(mods)){
+  if(class(mods[[i]])=="sdmTMB"){
+    df=broom.mixed::tidy(mods[[i]])
+    df$statistic=df$estimate/df$std.error
+    df$p.value=exp(-0.717*df$statistic-0.416*df$statistic^2)
+    df<-as.data.frame(df)
+  }
+  
+  #add statistic, p value
+  if(class(mods[[i]])=="glmmTMB"){
+    df=broom.mixed::tidy(mods[[i]])
+    #df$model=models[i]
+    df=df[df$effect=="fixed",]
+    #term, estimate, std error, statistic, p value
+    df=df[,c("term","estimate","std.error","statistic","p.value")]
+    df<-as.data.frame(df)
+    
+  }
+  
+  df$model=models[i]
+  
+  if(i==1){
+    parms=df
+  } else{
+    parms=rbind(parms,df)
+  }
+  
+}
 
-# Plot data ------------------------------------------------------------
-
-#ta=allc[is.na(allc$sex),]
-#ta=allc[allc$period=="after",]
-
-df <- mtcars
-df$col <- ifelse( df$cyl < 6, "cyl < 6", as.character(df$carb))
-non_green <- unique(df$col[df$col != "cyl < 6"])
-non_green <- non_green[order(non_green)]
-
-aer_vals <- unique(allc$Estimate[allc$trt=="aer"])
-
-ggplot(df, aes(x=qsec, y=hp,  colour= col )) +
-  scale_color_manual(values = c(setNames(brewer.pal(length(non_green), name = "Reds"), non_green), "cyl < 6" = "green")) +
-  geom_point() +
-  theme_bw()
-
-allc %>%
-  ggplot(.,aes(x=response,y=rem_per_sex,fill=Estimate,alpha=alpha))+
-  geom_tile()+
-  theme_ipsum()+
-  facet_wrap(~trt)
-
-install.packages("ggnewscale")
-library(ggnewscale)
-aer_colors <- rev(c('#cdabff', "#822AFF", "#311854"))
-trap_colors <- rev(c('#fcaed4', '#FF57A9', '#632242'))
-tox_colors <- rev(c('#ffbf99', '#FF985A', '#8a4820'))
-
-
-#dat1=allc[allc$sex=="whole",]
-dat1=allc
-ggplot() + 
-  geom_tile(
-    data = dat1 %>% filter(trt=="aer") %>% droplevels, 
-    aes(response, rem_per_sex, fill=Estimate,alpha=alpha)
-  ) + 
-  scale_fill_gradientn(colors = aer_colors)+
-  scale_alpha(range=c(0.25,1))+
-  new_scale_fill() + 
-  geom_tile(
-    data = dat1 %>% filter(trt=="trap") %>% droplevels, 
-    aes(response, rem_per_sex, fill=Estimate,alpha=alpha)
-  )+
-  scale_fill_gradientn(colors = trap_colors)+
-  new_scale_fill() + 
-  geom_tile(
-    data = dat1 %>% filter(trt=="tox") %>% droplevels, 
-    aes(response, rem_per_sex, fill=Estimate,alpha=alpha)
-  )+
-  scale_fill_gradientn(colors = tox_colors)+
-  theme_ipsum()
-
-
-dat2=allc[allc$sex!="whole",]
-ggplot() + 
-  geom_tile(
-    data = dat2 %>% filter(trt=="aer") %>% droplevels, 
-    aes(response, rem_per_sex, fill=Estimate,alpha=alpha)
-  ) + 
-  scale_fill_gradientn(colors = aer_colors)+
-  scale_alpha(range=c(0.25,1))+
-  new_scale_fill() + 
-  geom_tile(
-    data = dat2 %>% filter(trt=="trap") %>% droplevels, 
-    aes(response, rem_per_sex, fill=Estimate,alpha=alpha)
-  )+
-  scale_fill_gradientn(colors = trap_colors)+
-  new_scale_fill() + 
-  geom_tile(
-    data = dat2 %>% filter(trt=="tox") %>% droplevels, 
-    aes(response, rem_per_sex, fill=Estimate,alpha=alpha)
-  )+
-  scale_fill_gradientn(colors = tox_colors)+
-  theme_ipsum()
-
-
-
-
-#current challenges for this heat map
-#values scale needs to be different between each one
-#heat map is not great when you have different units....
-#because you'd have to have the color legends over on the right for each one
-#as is currently, is just on one scale, which is also not appropriate for obvious reasons
-
-#geom_col is way better for what we want to show here
-#also note, bit misleading to show differences that weren't sig in the model
-#moving forward, ONLY show removal types that had significant effects
-#within those, use lower opacity/different color to indicate effects that were not significant
-
-aer_colors <- rev(c('#cdabff', "#822AFF", "#311854"))
-trap_colors <- rev(c('#fcaed4', '#FF57A9', '#632242'))
-tox_colors <- rev(c('#ffbf99', '#FF985A', '#8a4820'))
-
-#Next steps:
-#1. determine which interactions in model are significant
-# just do this manually, easier
-#2. plot only significant effects-- including male/female intxn terms
-#3. add labels to end of columns
-
-p1=pdiffs5 %>% filter(rem=="tox", response=="area", sex=="whole") %>%
-  ggplot()+
-  geom_col(
-    data = . %>% droplevels, 
-    aes(x=key, y=pred, group=response),
-    fill="#FF985A"
-  )+theme_ipsum()
-
-p2=pdiffs5 %>% filter(rem=="tox", response=="nsd", sex=="whole") %>%
-  ggplot()+
-  geom_col(
-    data = . %>% droplevels, 
-    aes(x=key, y=pred, group=response),
-    fill="#FF985A"
-  )+theme_ipsum()
-
+if(!dir.exists(file.path(outdir,"Model_Output"))){dir.create(file.path(outdir,"Model_Output"))}
+saveRDS(preds,file.path(outdir,"Model_Output","area_preds.rds"))
+saveRDS(allc,file.path(outdir,"Model_Output","area_intxns.rds"))
+saveRDS(parms,file.path(outdir,"Model_Output","area_full_param.rds"))
 
 
