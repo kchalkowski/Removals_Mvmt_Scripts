@@ -339,8 +339,32 @@ allc$alpha[allc$`Pr(>|z|)`<0.05]<-1
 
 # Combine full parameter tables -----------------------------------------------------------
 for(i in 1:length(mods)){
-  df=broom.mixed::tidy(mods[[i]])
+  if(class(mods[[i]])=="sdmTMB"){
+    df=broom.mixed::tidy(mods[[i]])
+    df$statistic=df$estimate/df$std.error
+    df$p.value=exp(-0.717*df$statistic-0.416*df$statistic^2)
+    df<-as.data.frame(df)
+  }
+  
+  #add statistic, p value
+  if(class(mods[[i]])=="glmmTMB"){
+    df=broom.mixed::tidy(mods[[i]])
+    df$model=models[i]
+    df=df[df$effect=="fixed",]
+    #term, estimate, std error, statistic, p value
+    df=df[,c(4:8)]
+    df<-as.data.frame(df)
+    
+  }
+  
   df$model=models[i]
+  
+  if(i==1){
+    parms=df
+  } else{
+    parms=rbind(parms,df)
+  }
+  
 }
 
 # Save model output -----------------------------------------------------------
@@ -348,5 +372,5 @@ for(i in 1:length(mods)){
 if(!dir.exists(file.path(outdir,"Model_Output"))){dir.create(file.path(outdir,"Model_Output"))}
 saveRDS(preds,file.path(outdir,"Model_Output","nsd_preds.rds"))
 saveRDS(allc,file.path(outdir,"Model_Output","nsd_intxns.rds"))
-saveRDS(df,file.path(outdir,"Model_Output","nsd_full_param.rds"))
+saveRDS(parms,file.path(outdir,"Model_Output","nsd_full_param.rds"))
 
