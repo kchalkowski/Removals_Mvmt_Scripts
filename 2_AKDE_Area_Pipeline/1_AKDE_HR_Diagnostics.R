@@ -43,8 +43,14 @@ objdir=file.path(home,"1_Data","Objects",fsep=.Platform$file.sep)
 funcdir=file.path(home,"2_Scripts","Functions",fsep=.Platform$file.sep)
 outdir=file.path(home,"3_Output",fsep=.Platform$file.sep)
 
+#source needed functions
+func.list=list.files(file.path(home,"2_Scripts","Functions",fsep=.Platform$file.sep),full.names=TRUE)
+for(f in 1:(length(func.list)-1)){
+  source(func.list[f])
+}
+
 #Load and format geo data
-geo=read.csv(paste0(home,"Objects/geo_remtyp.csv"))
+geo=read.csv(file.path(home,"1_Data","Objects","geo_remtyp.csv"))
 geo=geo[,-1]
 geo=geo[!is.na(geo$Removal.Type),]
 geo$date_only<-Neat.Dates.POSIXct(geo$date_only,tz="UTC")
@@ -52,13 +58,6 @@ geo$date_only<-Neat.Dates.POSIXct(geo$date_only,tz="UTC")
 #Read input objects
 input="/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/1_Data/Input/"
 activities.raw=readRDS(paste0(input,"activities.rds"))
-
-#source needed functions
-funcdir<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/2_Scripts/Functions"
-func.list=list.files(funcdir,full.names=TRUE)
-for(f in 1:length(func.list)){
-  source(func.list[f])
-}
 
 #Load df outputs from Get_Period_AKDEs
 akaer=readRDS("/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/outdf_akde_aerial.rds")
