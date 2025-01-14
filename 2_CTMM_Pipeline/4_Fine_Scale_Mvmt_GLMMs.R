@@ -25,9 +25,9 @@
   library(sdmTMB)
 
   #set directories
-   homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
+  # homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
   # homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
-  # homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
+  homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
   objdir=file.path(homedir,"1_Data","Objects",fsep=.Platform$file.sep)
   results_dir <- file.path(homedir,"/3_Output/",fsep=.Platform$file.sep)
   
@@ -614,14 +614,14 @@ ggplot(conaer)+
 conaer <- conaer %>% filter(dist==10)
 
 #offset for 0's 
-conaer$contacts_per_day<- conaer$contacts_per_day+0.0001
+# conaer$contacts_per_day<- conaer$contacts_per_day+0.0001
 
 ## removal type * period -----
 res_ncon_rp_aer=glmmTMB(contacts_per_day~(1|animalid)+
                         Removal.Type*removal.period.akdecalc,
-                         data=conaer,
-                         family=Gamma(link="log")
-                        # family=nbinom12(link="log")
+                        data=conaer,
+                        family=ziGamma(link="log"),
+                        ziformula = ~1
                         )
 
 aer_res_ncon_rp <- simulateResiduals(res_ncon_rp_aer)
@@ -633,13 +633,15 @@ plot(aer_res_ncon_rp2$simulatedResponse)
 descdist(aer_res_ncon_rp2$fittedResiduals)
 DHARMa::testDispersion(aer_res_ncon_rp2)
 
-#saveRDS(res_ncon_rp_aer,paste0(results_dir,"res_ncon_rp_aer.rds"))
+saveRDS(res_ncon_rp_aer,paste0(results_dir,"res_ncon_rp_aer.rds"))
 
 ## removal type * period *sex -----
-res_ncon_rps_aer=glmmTMB(num_contacts~(1|animalid)+
-                          Removal.Type*removal.period.akdecalc*sex,
-                        data=conaer,
-                        family=poisson(link='log'))
+res_ncon_rps_aer=glmmTMB(contacts_per_day~(1|animalid)+
+                         Removal.Type*removal.period.akdecalc*sex,
+                         data=conaer,
+                         family=ziGamma(link="log"),
+                         ziformula = ~1
+                          )
 
 aer_res_ncon_rps <- simulateResiduals(res_ncon_rps_aer)
 aer_res_ncon_rps2 = recalculateResiduals(aer_res_ncon_rps, 
@@ -650,15 +652,30 @@ plot(aer_res_ncon_rps2$simulatedResponse)
 descdist(aer_res_ncon_rps2$fittedResiduals)
 DHARMa::testDispersion(aer_res_ncon_rps2)
 
-#saveRDS(res_ncon_rps_aer,paste0(results_dir,"res_ncon_rps_aer.rds"))
+saveRDS(res_ncon_rps_aer,paste0(results_dir,"res_ncon_rps_aer.rds"))
 
 #trap ------
-## removal type * period -----
-res_ncon_rp_trap=glmmTMB(num_contacts~(1|animalid)+
-                          Removal.Type*removal.period.akdecalc,
-                        data=contrap,
-                        family=poisson(link='log'))
+contrap <- readRDS(paste0(objdir,"/pairwise_contacts_trap.rds"))
 
+contrap$Removal.Type <- 
+  factor(contrap$trt_typ,levels=c('ctrl','trt'))
+contrap$removal.period.akdecalc <- 
+  factor(contrap$removal.period.akdecalc,levels=c('before','after'))
+
+#distance thresholds
+ggplot(contrap)+
+  geom_histogram(aes(x=contacts_per_day))+
+  facet_wrap(.~dist)
+
+contrap <- contrap %>% filter(dist==10)
+
+## removal type * period -----
+res_ncon_rp_trap=glmmTMB(contacts_per_day~(1|animalid)+
+                         Removal.Type*removal.period.akdecalc,
+                         data=contrap,
+                         family=ziGamma(link="log"),
+                         ziformula = ~1
+                         )
 trap_res_ncon_rp <- simulateResiduals(res_ncon_rp_trap)
 trap_res_ncon_rp2 = recalculateResiduals(trap_res_ncon_rp, 
                                         group = as.factor(contrap$animalid), 
@@ -668,14 +685,15 @@ plot(trap_res_ncon_rp2$simulatedResponse)
 descdist(trap_res_ncon_rp2$fittedResiduals)
 DHARMa::testDispersion(trap_res_ncon_rp2)
 
-#saveRDS(res_ncon_rp_trap,paste0(results_dir,"res_ncon_rp_trap.rds"))
+saveRDS(res_ncon_rp_trap,paste0(results_dir,"res_ncon_rp_trap.rds"))
 
 ## removal type * period *sex -----
-res_ncon_rps_trap=glmmTMB(num_contacts~(1|animalid)+
-                           Removal.Type*removal.period.akdecalc*sex,
-                         data=contrap,
-                         family=poisson(link='log'))
-
+res_ncon_rps_trap=glmmTMB(contacts_per_day~(1|animalid)+
+                          Removal.Type*removal.period.akdecalc*sex,
+                          data=contrap,
+                          family=ziGamma(link="log"),
+                          ziformula = ~1
+                          )
 trap_res_ncon_rps <- simulateResiduals(res_ncon_rps_trap)
 trap_res_ncon_rps2 = recalculateResiduals(trap_res_ncon_rps, 
                                          group = as.factor(contrap$animalid), 
@@ -685,15 +703,30 @@ plot(trap_res_ncon_rps2$simulatedResponse)
 descdist(trap_res_ncon_rps2$fittedResiduals)
 DHARMa::testDispersion(trap_res_ncon_rps2)
 
-#saveRDS(res_ncon_rps_trap,paste0(results_dir,"res_ncon_rps_trap.rds"))
+saveRDS(res_ncon_rps_trap,paste0(results_dir,"res_ncon_rps_trap.rds"))
 
 #tox ------
-## removal type * period -----
-res_ncon_rp_tox=glmmTMB(num_contacts~(1|animalid)+
-                          Removal.Type*removal.period.akdecalc,
-                        data=contox,
-                        family=poisson(link='log'))
+contox <- readRDS(paste0(objdir,"/pairwise_contacts_tox.rds"))
 
+contox$Removal.Type <- 
+  factor(contox$trt_typ,levels=c('ctrl','trt'))
+contox$removal.period.akdecalc <- 
+  factor(contox$removal.period.akdecalc,levels=c('before','after'))
+
+#distance thresholds
+ggplot(contox)+
+  geom_histogram(aes(x=contacts_per_day))+
+  facet_wrap(.~dist)
+
+contox <- contox %>% filter(dist==10)
+
+## removal type * period -----
+res_ncon_rp_tox=glmmTMB(contacts_per_day~(1|animalid)+
+                        Removal.Type*removal.period.akdecalc,
+                        data=contox,
+                        family=ziGamma(link="log"),
+                        ziformula = ~1
+                        )
 tox_res_ncon_rp <- simulateResiduals(res_ncon_rp_tox)
 tox_res_ncon_rp2 = recalculateResiduals(tox_res_ncon_rp, 
                                         group = as.factor(contox$animalid), 
@@ -703,13 +736,15 @@ plot(tox_res_ncon_rp2$simulatedResponse)
 descdist(tox_res_ncon_rp2$fittedResiduals)
 DHARMa::testDispersion(tox_res_ncon_rp2)
 
-#saveRDS(res_ncon_rp_tox,paste0(results_dir,"res_ncon_rp_tox.rds"))
+saveRDS(res_ncon_rp_tox,paste0(results_dir,"res_ncon_rp_tox.rds"))
 
 ## removal type * period *sex -----
-res_ncon_rps_tox=glmmTMB(num_contacts~(1|animalid)+
-                           Removal.Type*removal.period.akdecalc*sex,
+res_ncon_rps_tox=glmmTMB(contacts_per_day~(1|animalid)+
+                         Removal.Type*removal.period.akdecalc*sex,
                          data=contox,
-                         family=poisson(link='log'))
+                         family=ziGamma(link="log"),
+                         ziformula = ~1
+                         )
 
 tox_res_ncon_rps <- simulateResiduals(res_ncon_rps_tox)
 tox_res_ncon_rps2 = recalculateResiduals(tox_res_ncon_rps, 
@@ -720,17 +755,22 @@ plot(tox_res_ncon_rps2$simulatedResponse)
 descdist(tox_res_ncon_rps2$fittedResiduals)
 DHARMa::testDispersion(tox_res_ncon_rps2)
 
-#saveRDS(res_ncon_rps_tox,paste0(results_dir,"res_ncon_rps_tox.rds"))
+saveRDS(res_ncon_rps_tox,paste0(results_dir,"res_ncon_rps_tox.rds"))
 
 
 # contacts - degree --------
+ggplot(conaer)+
+  geom_histogram(aes(x=indivs_per_day))+
+  facet_wrap(.~dist)
 
 #aerial ------
 ## removal type * period -----
-res_nind_rp_aer=glmmTMB(num_indivs~(1|animalid)+
-                          Removal.Type*removal.period.akdecalc,
+res_nind_rp_aer=glmmTMB(indivs_per_day~(1|animalid)+
+                        Removal.Type*removal.period.akdecalc,
                         data=conaer,
-                        family=poisson(link='log'))
+                        family=ziGamma(link="log"),
+                        ziformula = ~1
+                        )
 
 aer_res_nind_rp <- simulateResiduals(res_nind_rp_aer)
 aer_res_nind_rp2 = recalculateResiduals(aer_res_nind_rp, 
@@ -741,13 +781,15 @@ plot(aer_res_nind_rp2$simulatedResponse)
 descdist(aer_res_nind_rp2$fittedResiduals)
 DHARMa::testDispersion(aer_res_nind_rp2)
 
-#saveRDS(res_nind_rp_aer,paste0(results_dir,"res_nind_rp_aer.rds"))
+saveRDS(res_nind_rp_aer,paste0(results_dir,"res_nind_rp_aer.rds"))
 
 ## removal type * period *sex -----
-res_nind_rps_aer=glmmTMB(num_indivs~(1|animalid)+
-                           Removal.Type*removal.period.akdecalc*sex,
+res_nind_rps_aer=glmmTMB(indivs_per_day~(1|animalid)+
+                         Removal.Type*removal.period.akdecalc*sex,
                          data=conaer,
-                         family=poisson(link='log'))
+                         family=ziGamma(link="log"),
+                         ziformula = ~1
+                         )
 
 aer_res_nind_rps <- simulateResiduals(res_nind_rps_aer)
 aer_res_nind_rps2 = recalculateResiduals(aer_res_nind_rps, 
@@ -758,14 +800,20 @@ plot(aer_res_nind_rps2$simulatedResponse)
 descdist(aer_res_nind_rps2$fittedResiduals)
 DHARMa::testDispersion(aer_res_nind_rps2)
 
-#saveRDS(res_nind_rps_aer,paste0(results_dir,"res_nind_rps_aer.rds"))
+saveRDS(res_nind_rps_aer,paste0(results_dir,"res_nind_rps_aer.rds"))
 
 #trap ------
+ggplot(contrap)+
+  geom_histogram(aes(x=indivs_per_day))+
+  facet_wrap(.~dist)
+
 ## removal type * period -----
-res_nind_rp_trap=glmmTMB(num_indivs~(1|animalid)+
-                           Removal.Type*removal.period.akdecalc,
+res_nind_rp_trap=glmmTMB(indivs_per_day~(1|animalid)+
+                         Removal.Type*removal.period.akdecalc,
                          data=contrap,
-                         family=poisson(link='log'))
+                         family=ziGamma(link="log"),
+                         ziformula = ~1
+                         )
 
 trap_res_nind_rp <- simulateResiduals(res_nind_rp_trap)
 trap_res_nind_rp2 = recalculateResiduals(trap_res_nind_rp, 
@@ -776,13 +824,15 @@ plot(trap_res_nind_rp2$simulatedResponse)
 descdist(trap_res_nind_rp2$fittedResiduals)
 DHARMa::testDispersion(trap_res_nind_rp2)
 
-#saveRDS(res_nind_rp_trap,paste0(results_dir,"res_nind_rp_trap.rds"))
+saveRDS(res_nind_rp_trap,paste0(results_dir,"res_nind_rp_trap.rds"))
 
 ## removal type * period *sex -----
-res_nind_rps_trap=glmmTMB(num_indivs~(1|animalid)+
-                            Removal.Type*removal.period.akdecalc*sex,
+res_nind_rps_trap=glmmTMB(indivs_per_day~(1|animalid)+
+                          Removal.Type*removal.period.akdecalc*sex,
                           data=contrap,
-                          family=poisson(link='log'))
+                          family=ziGamma(link="log"),
+                          ziformula = ~1
+                          )
 
 trap_res_nind_rps <- simulateResiduals(res_nind_rps_trap)
 trap_res_nind_rps2 = recalculateResiduals(trap_res_nind_rps, 
@@ -793,15 +843,20 @@ plot(trap_res_nind_rps2$simulatedResponse)
 descdist(trap_res_nind_rps2$fittedResiduals)
 DHARMa::testDispersion(trap_res_nind_rps2)
 
-#saveRDS(res_nind_rps_trap,paste0(results_dir,"res_nind_rps_trap.rds"))
+saveRDS(res_nind_rps_trap,paste0(results_dir,"res_nind_rps_trap.rds"))
 
 #tox ------
-## removal type * period -----
-res_nind_rp_tox=glmmTMB(num_indivs~(1|animalid)+
-                          Removal.Type*removal.period.akdecalc,
-                        data=contox,
-                        family=poisson(link='log'))
+ggplot(contox)+
+  geom_histogram(aes(x=indivs_per_day))+
+  facet_wrap(.~dist)
 
+## removal type * period -----
+res_nind_rp_tox=glmmTMB(indivs_per_day~(1|animalid)+
+                        Removal.Type*removal.period.akdecalc,
+                        data=contox,
+                        family=ziGamma(link="log"),
+                        ziformula = ~1
+                        )
 tox_res_nind_rp <- simulateResiduals(res_nind_rp_tox)
 tox_res_nind_rp2 = recalculateResiduals(tox_res_nind_rp, 
                                         group = as.factor(contox$animalid), 
@@ -811,13 +866,15 @@ plot(tox_res_nind_rp2$simulatedResponse)
 descdist(tox_res_nind_rp2$fittedResiduals)
 DHARMa::testDispersion(tox_res_nind_rp2)
 
-#saveRDS(res_nind_rp_tox,paste0(results_dir,"res_nind_rp_tox.rds"))
+saveRDS(res_nind_rp_tox,paste0(results_dir,"res_nind_rp_tox.rds"))
 
 ## removal type * period *sex -----
-res_nind_rps_tox=glmmTMB(num_indivs~(1|animalid)+
-                           Removal.Type*removal.period.akdecalc*sex,
+res_nind_rps_tox=glmmTMB(indivs_per_day~(1|animalid)+
+                         Removal.Type*removal.period.akdecalc*sex,
                          data=contox,
-                         family=poisson(link='log'))
+                         family=ziGamma(link="log"),
+                         ziformula = ~1
+                         )
 
 tox_res_nind_rps <- simulateResiduals(res_nind_rps_tox)
 tox_res_nind_rps2 = recalculateResiduals(tox_res_nind_rps, 
@@ -828,5 +885,5 @@ plot(tox_res_nind_rps2$simulatedResponse)
 descdist(tox_res_nind_rps2$fittedResiduals)
 DHARMa::testDispersion(tox_res_nind_rps2)
 
-#saveRDS(res_nind_rps_tox,paste0(results_dir,"res_nind_rps_tox.rds"))
+saveRDS(res_nind_rps_tox,paste0(results_dir,"res_nind_rps_tox.rds"))
 
