@@ -24,10 +24,20 @@
   library(hrbrthemes)
   library(sdmTMB)
 
+#sneaky homedir substitution
+switch(Sys.info()[['sysname']],
+       Windows= {homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
+        },
+       Linux  = {print("I'm a penguin.")},
+       Darwin = {
+         homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
+        }
+       )
+
   #set directories
-  # homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
+  #homedir <- "/Users/kayleigh.chalkowski/OneDrive/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
   # homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
-  homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
+  #homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
   objdir=file.path(homedir,"1_Data","Objects",fsep=.Platform$file.sep)
   results_dir <- file.path(homedir,"/3_Output/",fsep=.Platform$file.sep)
   
@@ -407,11 +417,6 @@ testSpatialAutocorrelation(tox_res_rp2,groupLocations$mX,groupLocations$mY)
 #removed spatial autocorrelation, p=0.6789
 
 #saveRDS(res_speed_rps_tox,paste0(results_dir,"res_speed_rps_tox.rds"))
-
-#! Note for Abbey ------------------------------
-# Changing output formatting to be in scripts where models are run, too difficult formatting output in separate script. 
-  # When contact models are finished, move these sections to below those glmms and add model objects to 'mods' and model names to 'models' as strings
-  # This formats the output to be used to make parameter tables, figures, etc.
 
 # Format model info -----------------------------------------------------------
 mods<-list(res_distance_rp_aer,

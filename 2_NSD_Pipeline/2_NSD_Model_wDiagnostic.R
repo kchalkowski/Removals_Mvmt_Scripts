@@ -188,7 +188,7 @@ geo.wkdf=geo.aerd.wk
 geo.wkdf$removal.period.akdecalc<-forcats::fct_relevel(geo.wkdf$removal.period.akdecalc,c("before","after"))
 geo.wkdf$sex<-forcats::fct_relevel(geo.wkdf$sex,c("Female","Male"))
 res.rp_aer=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.wkdf,family=Gamma(link=log))
-res.rps_aer=glmmTMB(mNSD ~ (1|animalid/week) + Removal.Type*removal.period.akdecalc, data=geo.wkdf,family=Gamma(link=log))
+res.rps_aer=glmmTMB(mNSD ~ (1|animalid/week) + Removal.Type*removal.period.akdecalc*sex, data=geo.wkdf,family=Gamma(link=log))
 
 #aerial rps model with temporal autocorrelation wouldn't converge
 
