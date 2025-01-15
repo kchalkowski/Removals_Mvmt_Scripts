@@ -286,13 +286,14 @@ system.time(
 )
 stopCluster(cl)
 
-parContacts <- lapply(1:length(parContacts),function(i)parContacts[[i]]$dist_mat_all)
-parContacts <- do.call("rbind.data.frame",parContacts)
+parContacts1 <- lapply(1:length(parContacts),function(i)parContacts[[i]]$dist_mat_all)
+parContacts1 <- do.call("rbind.data.frame",parContacts1)
+
 
 # split by rem typ and link to sex
-contacts_aer <- parContacts %>% filter(rem_typ=="aer")
-contacts_tox <- parContacts %>% filter(rem_typ=="tox")
-contacts_trap <- parContacts %>% filter(rem_typ=="trap")
+contacts_aer <- parContacts1 %>% filter(rem_typ=="aer")
+contacts_tox <- parContacts1 %>% filter(rem_typ=="tox")
+contacts_trap <- parContacts1 %>% filter(rem_typ=="trap")
 
 contacts_aer <- contacts_aer %>% left_join(geo.aer %>% dplyr::select(animalid,sex) %>% distinct())
 contacts_trap <- contacts_trap %>% left_join(geo.trap %>% dplyr::select(animalid,sex) %>% distinct())
@@ -318,7 +319,7 @@ tox_per_days <- geo.tox %>%
             period_days=as.numeric(end-start))
 
 contacts_aer <- contacts_aer %>% rename(removal.period.akdecalc=period) %>% 
-  left_join(aer_per_days %>% select(-c(start,end)))%>%
+  left_join(aer_per_days %>% select(-c(start,end))) %>%
   mutate(contacts_per_day=num_contacts/period_days,
          indivs_per_day=num_indivs/period_days)
 contacts_trap<- contacts_trap %>% rename(removal.period.akdecalc=period) %>% 
@@ -329,6 +330,10 @@ contacts_tox <- contacts_tox %>% rename(removal.period.akdecalc=period) %>%
   left_join(tox_per_days %>% select(-c(start,end)))%>%
   mutate(contacts_per_day=num_contacts/period_days,
          indivs_per_day=num_indivs/period_days)
+
+head(contacts_aer)
+head(contacts_trap)
+head(contacts_tox)
 
 #save ouptut
 saveRDS(contacts_aer,file=paste0(objdir,"/pairwise_contacts_aer.rds"))
