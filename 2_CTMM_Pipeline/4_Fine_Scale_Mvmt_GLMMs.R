@@ -1176,3 +1176,6 @@ testSpatialAutocorrelation(tox_res_nind_rps_sf2,
 
 saveRDS(res_nind_rps_tox_sf,paste0(results_dir,"res_nind_rps_tox.rds"))
 
+saveRDS(conaer,paste0(results_dir,"conaer.rds"))
+saveRDS(contox,paste0(results_dir,"contox.rds"))
+saveRDS(contrap,paste0(results_dir,"contrap.rds"))
