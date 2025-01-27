@@ -418,6 +418,605 @@ testSpatialAutocorrelation(tox_res_rp2,groupLocations$mX,groupLocations$mY)
 
 #saveRDS(res_speed_rps_tox,paste0(results_dir,"res_speed_rps_tox.rds"))
 
+
+# contacts - number --------
+## aerial ------------
+conaer <- readRDS(paste0(objdir,"/pairwise_contacts_aer.rds"))
+
+conaer$Removal.Type <- 
+  factor(conaer$trt_typ,levels=c('ctrl','trt'))
+conaer$removal.period.akdecalc <- 
+  factor(conaer$removal.period.akdecalc,levels=c('before','after'))
+
+#distance thresholds
+#ggplot(conaer)+
+#  geom_histogram(aes(x=contacts_per_day))+
+#  facet_wrap(.~dist)
+
+#set to 10m
+conaer <- conaer %>% filter(dist==10)
+
+#join mean X/Y locs to conaer
+conaer <- conaer %>% left_join(
+  geo.aer %>% 
+    group_by(animalid,removal.period.akdecalc) %>% 
+    summarise(mX=mean(X),
+              mY=mean(Y)))
+
+conaer$animalid <- 
+  factor(conaer$animalid)
+
+#set negligible offset to get gamma to work
+conaer$contacts_per_day_offset <- conaer$contacts_per_day+0.0001
+
+#get summary of 0 contacts
+conaer %>% group_by(contacts_per_day==0) %>% summarise(n=n())
+
+### removal type * period -----
+res_ncon_rp_aer=glmmTMB(contacts_per_day_offset~(1|animalid)+
+                          Removal.Type*removal.period.akdecalc,
+                        data=conaer,
+                        family=Gamma(link="log")
+)
+
+aer_res_ncon_rp <- simulateResiduals(res_ncon_rp_aer)
+aer_res_ncon_rp2 = recalculateResiduals(aer_res_ncon_rp, 
+                                        group = as.factor(conaer$animalid), 
+                                        rotation="estimated")
+plot(aer_res_ncon_rp2)
+plot(aer_res_ncon_rp2$simulatedResponse)
+descdist(aer_res_ncon_rp2$fittedResiduals)
+DHARMa::testDispersion(aer_res_ncon_rp2)
+
+#test spatial autocorrelation
+aer_groupLocations_con = aggregate(conaer[,c("mX","mY")],
+                                    list(conaer$animalid),
+                                    mean)
+testSpatialAutocorrelation(aer_res_ncon_rp2,
+                           aer_groupLocations_con$mX, 
+                           aer_groupLocations_con$mY)
+#spatially autocorrelated p-value = 0.002235
+
+#correcting spatial autocorrelation
+spatial_res <- 1000
+mesh_cutoff=0.5
+conaer$mX_sc <- floor(conaer$mX/spatial_res)
+conaer$mY_sc <- floor(conaer$mY/spatial_res)
+meshaer_con <- make_mesh(conaer,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
+
+res_ncon_rp_aer_sf = sdmTMB(contacts_per_day_offset~
+                              (1|animalid)+
+                               Removal.Type*removal.period.akdecalc,
+                             data=conaer,
+                             family=Gamma(link="log"),
+                             mesh=meshaer_con,
+                             spatial="on")
+
+sanity(res_ncon_rp_aer_sf)
+aer_res_rp_sf <- simulate(res_ncon_rp_aer_sf, 
+                          nsim = 544,type = 'mle-mvn') %>%
+  dharma_residuals(res_ncon_rp_aer_sf, return_DHARMa = TRUE)
+aer_res_rp_sf2 = recalculateResiduals(aer_res_rp_sf,
+                                      group = as.factor(conaer$animalid),
+                                      rotation="estimated")
+testSpatialAutocorrelation(aer_res_rp_sf2,
+                           aer_groupLocations_con$mX,
+                           aer_groupLocations_con$mY)
+
+#saveRDS(res_ncon_rp_aer_sf,paste0(results_dir,"res_ncon_rp_aer.rds"))
+
+### removal type * period *sex -----
+res_ncon_rps_aer=glmmTMB(contacts_per_day_offset~
+                           (1|animalid)+
+                           Removal.Type*removal.period.akdecalc*sex,
+                         data=conaer,
+                         family=Gamma(link="log")
+)
+
+aer_res_ncon_rps <- simulateResiduals(res_ncon_rps_aer)
+aer_res_ncon_rps2 = recalculateResiduals(aer_res_ncon_rps, 
+                                        group = as.factor(conaer$animalid), 
+                                        rotation="estimated")
+plot(aer_res_ncon_rps2)
+plot(aer_res_ncon_rps2$simulatedResponse)
+descdist(aer_res_ncon_rps2$fittedResiduals)
+DHARMa::testDispersion(aer_res_ncon_rps2)
+
+#test spatial autocorrelation
+testSpatialAutocorrelation(aer_res_ncon_rps2,
+                           aer_groupLocations_con$mX, 
+                           aer_groupLocations_con$mY)
+# spatial autocorrelation p=0.02
+
+#correcting for spatial autocorrelation
+### NOTE: model overparameterized, very poor fit
+spatial_res <- 1000
+mesh_cutoff=4
+conaer$mX_sc <- floor(conaer$mX/spatial_res)
+conaer$mY_sc <- floor(conaer$mY/spatial_res)
+meshaer_con <- make_mesh(conaer,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
+
+res_ncon_rps_aer_sf = sdmTMB(contacts_per_day_offset~
+                               (1|animalid)+
+                              Removal.Type*removal.period.akdecalc*sex,
+                            data=conaer,
+                            family=Gamma(link="log"),
+                            mesh=meshaer_con,
+                            spatial="on")
+
+sanity(res_ncon_rps_aer_sf)
+aer_res_rps_sf <- simulate(res_ncon_rps_aer_sf,
+                          nsim = 544,type = 'mle-mvn') %>%
+  dharma_residuals(res_ncon_rp_aer_sf, return_DHARMa = TRUE)
+aer_res_rps_sf2 = recalculateResiduals(aer_res_rps_sf,
+                                      group = as.factor(conaer$animalid),
+                                      rotation="estimated")
+testSpatialAutocorrelation(aer_res_rps_sf2,
+                           aer_groupLocations_con$mX,
+                           aer_groupLocations_con$mY)
+
+#saveRDS(res_ncon_rps_aer,paste0(results_dir,"res_ncon_rps_aer.rds"))
+
+##trap ------
+contrap <- readRDS(paste0(objdir,"/pairwise_contacts_trap.rds"))
+
+contrap$Removal.Type <- 
+  factor(contrap$trt_typ,levels=c('ctrl','trt'))
+contrap$removal.period.akdecalc <- 
+  factor(contrap$removal.period.akdecalc,levels=c('before','during','after'))
+
+#distance thresholds
+ggplot(contrap)+
+  geom_histogram(aes(x=contacts_per_day))+
+  facet_wrap(.~dist)
+
+contrap <- contrap %>% filter(dist==10)
+
+contrap <- contrap %>% left_join(
+  geo.trap %>% 
+    group_by(animalid) %>% 
+    summarise(mX=mean(X),
+              mY=mean(Y)))
+
+contrap$animalid <- 
+  factor(contrap$animalid)
+
+contrap$contacts_per_day_offset <- contrap$contacts_per_day+0.0001
+
+contrap %>% group_by(contacts_per_day==0) %>% summarise(n=n())
+
+### removal type * period -----
+res_ncon_rp_trap=glmmTMB(contacts_per_day_offset~(1|animalid)+
+                           Removal.Type*removal.period.akdecalc,
+                         data=contrap,
+                         family=Gamma(link="log")
+                         )
+trap_res_ncon_rp <- simulateResiduals(res_ncon_rp_trap)
+trap_res_ncon_rp2 = recalculateResiduals(trap_res_ncon_rp, 
+                                        group = as.factor(contrap$animalid), 
+                                        rotation="estimated")
+plot(trap_res_ncon_rp2)
+plot(trap_res_ncon_rp2$simulatedResponse)
+descdist(trap_res_ncon_rp2$fittedResiduals)
+DHARMa::testDispersion(trap_res_ncon_rp2)
+
+#test spatial autocorrelation
+trap_groupLocations_con = aggregate(contrap[,c("mX","mY")], 
+                                    list(contrap$animalid), 
+                                    mean)
+testSpatialAutocorrelation(trap_res_ncon_rp2,
+                           trap_groupLocations_con$mX, 
+                           trap_groupLocations_con$mY)
+#spatial autocorrelation p=0.02
+
+#correcting for spatial autocorrelation
+spatial_res <- 1000
+mesh_cutoff=0.5
+contrap$mX_sc <- floor(contrap$mX/spatial_res)
+contrap$mY_sc <- floor(contrap$mY/spatial_res)
+meshtrap_con <- make_mesh(contrap,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
+
+res_ncon_rp_trap_sf = sdmTMB(contacts_per_day_offset~(1|animalid)+
+                              Removal.Type*removal.period.akdecalc*sex,
+                            data=contrap,
+                            family=Gamma(link="log"),
+                            mesh=meshtrap_con,
+                            spatial="on")
+
+sanity(res_ncon_rp_trap_sf)
+trap_res_rp_sf <- simulate(res_ncon_rp_trap_sf,
+                          nsim = 544,type = 'mle-mvn') %>%
+  dharma_residuals(res_ncon_rp_trap_sf, return_DHARMa = TRUE)
+trap_res_rp_sf2 = recalculateResiduals(trap_res_rp_sf,
+                                      group = as.factor(contrap$animalid),
+                                      rotation="estimated")
+testSpatialAutocorrelation(trap_res_rp_sf2,
+                           trap_groupLocations_con$mX,
+                           trap_groupLocations_con$mY)
+#spatial autocorrelation p=0.19
+
+#saveRDS(res_ncon_rp_trap_sf,paste0(results_dir,"res_ncon_rp_trap.rds"))
+
+### removal type * period *sex -----
+res_ncon_rps_trap=glmmTMB(contacts_per_day_offset~
+                            (1|animalid)+
+                            Removal.Type*removal.period.akdecalc*sex,
+                          data=contrap,
+                          family=Gamma(link="log")
+                          )
+trap_res_ncon_rps <- simulateResiduals(res_ncon_rps_trap)
+trap_res_ncon_rps2 = recalculateResiduals(trap_res_ncon_rps, 
+                                         group = as.factor(contrap$animalid), 
+                                         rotation="estimated")
+plot(trap_res_ncon_rps2)
+plot(trap_res_ncon_rps2$simulatedResponse)
+descdist(trap_res_ncon_rps2$fittedResiduals)
+DHARMa::testDispersion(trap_res_ncon_rps2)
+
+#test spatial autocorrelation
+testSpatialAutocorrelation(trap_res_ncon_rps2,
+                           trap_groupLocations_con$mX, 
+                           trap_groupLocations_con$mY)
+#no spatial autocorrelation p=0.08
+
+#saveRDS(res_ncon_rps_trap,paste0(results_dir,"res_ncon_rps_trap.rds"))
+
+##tox ------
+contox <- readRDS(paste0(objdir,"/pairwise_contacts_tox.rds"))
+
+contox$Removal.Type <- 
+  factor(contox$trt_typ,levels=c('ctrl','trt'))
+contox$removal.period.akdecalc <- 
+  factor(contox$removal.period.akdecalc,levels=c('before','during','after'))
+
+#distance thresholds
+ggplot(contox)+
+  geom_histogram(aes(x=contacts_per_day))+
+  facet_wrap(.~dist)
+
+contox <- contox %>% filter(dist==10)
+
+contox <- contox %>% left_join(
+  geo.tox %>% 
+    group_by(animalid) %>% 
+    summarise(mX=mean(X),
+              mY=mean(Y)))
+
+contox$animalid <- 
+  factor(contox$animalid)
+
+contox$contacts_per_day_offset <- contox$contacts_per_day+0.0001
+
+#remove animals that died
+contox <- contox %>% filter(!is.na(num_contacts))
+
+contox %>% group_by(contacts_per_day==0) %>% summarise(n=n())
+
+### removal type * period -----
+res_ncon_rp_tox=glmmTMB(contacts_per_day_offset~
+                          (1|animalid)+
+                          Removal.Type*removal.period.akdecalc,
+                        data=contox,
+                        family=Gamma(link="log")
+                        )
+tox_res_ncon_rp <- simulateResiduals(res_ncon_rp_tox)
+tox_res_ncon_rp2 = recalculateResiduals(tox_res_ncon_rp, 
+                                        group = as.factor(contox$animalid), 
+                                        rotation="estimated")
+plot(tox_res_ncon_rp2)
+plot(tox_res_ncon_rp2$simulatedResponse)
+descdist(tox_res_ncon_rp2$fittedResiduals)
+DHARMa::testDispersion(tox_res_ncon_rp2)
+
+#test spatial autocorrelation
+tox_groupLocations_con = aggregate(contox[,c("mX","mY")], 
+                                   list(contox$animalid), 
+                                   mean)
+testSpatialAutocorrelation(tox_res_ncon_rp2,
+                           tox_groupLocations_con$mX, 
+                           tox_groupLocations_con$mY)
+#no spatial autocorrelation p=0.77
+
+#saveRDS(res_ncon_rp_tox,paste0(results_dir,"res_ncon_rp_tox.rds"))
+
+### removal type * period *sex -----
+res_ncon_rps_tox=glmmTMB(contacts_per_day_offset~
+                           (1|animalid)+
+                           Removal.Type*removal.period.akdecalc,
+                         data=contox,
+                         family=Gamma(link="log")
+                         )
+
+tox_res_ncon_rps <- simulateResiduals(res_ncon_rps_tox)
+tox_res_ncon_rps2 = recalculateResiduals(tox_res_ncon_rps, 
+                                         group = as.factor(contox$animalid), 
+                                         rotation="estimated")
+plot(tox_res_ncon_rps2)
+plot(tox_res_ncon_rps2$simulatedResponse)
+descdist(tox_res_ncon_rps2$fittedResiduals)
+DHARMa::testDispersion(tox_res_ncon_rps2)
+
+#test spatial autocorrelation
+testSpatialAutocorrelation(tox_res_ncon_rps2,
+                           tox_groupLocations_con$mX, 
+                           tox_groupLocations_con$mY)
+#no spatial autocorrelation p=0.77
+
+#saveRDS(res_ncon_rps_tox,paste0(results_dir,"res_ncon_rps_tox.rds"))
+
+#Set model list to pull into model info dfs at end of script
+cn_model_list=list(res_ncon_rp_tox,
+               res_ncon_rps_tox,
+               res_ncon_rps_trap,
+               res_ncon_rp_trap_sf,
+               res_ncon_rps_aer,
+               res_ncon_rp_aer_sf
+               )
+
+# contacts - degree --------
+ggplot(conaer)+
+  geom_histogram(aes(x=indivs_per_day))+
+  facet_wrap(.~dist)
+
+conaer$indivs_per_day_offset <- conaer$indivs_per_day+0.0001
+
+#aerial ------
+## removal type * period -----
+res_nind_rp_aer=glmmTMB(indivs_per_day_offset~
+                          (1|animalid)+
+                          Removal.Type*removal.period.akdecalc,
+                        data=conaer,
+                        family=Gamma(link="log")
+                        )
+
+aer_res_nind_rp <- simulateResiduals(res_nind_rp_aer)
+aer_res_nind_rp2 = recalculateResiduals(aer_res_nind_rp, 
+                                        group = as.factor(conaer$animalid), 
+                                        rotation="estimated")
+plot(aer_res_nind_rp2)
+plot(aer_res_nind_rp2$simulatedResponse)
+descdist(aer_res_nind_rp2$fittedResiduals)
+DHARMa::testDispersion(aer_res_nind_rp2)
+
+#test spatial autocorrelation
+testSpatialAutocorrelation(aer_res_nind_rp2,
+                           aer_groupLocations_con$mX, 
+                           aer_groupLocations_con$mY)
+#no spatial autocorrelation p=0.09
+
+#saveRDS(res_nind_rp_aer,paste0(results_dir,"res_nind_rp_aer.rds"))
+
+## removal type * period *sex -----
+res_nind_rps_aer=glmmTMB(indivs_per_day_offset~
+                           (1|animalid)+
+                           Removal.Type*removal.period.akdecalc*sex,
+                         data=conaer,
+                         family=Gamma(link="log")
+                         )
+
+aer_res_nind_rps <- simulateResiduals(res_nind_rps_aer)
+aer_res_nind_rps2 = recalculateResiduals(aer_res_nind_rps, 
+                                         group = as.factor(conaer$animalid), 
+                                         rotation="estimated")
+plot(aer_res_nind_rps2)
+plot(aer_res_nind_rps2$simulatedResponse)
+descdist(aer_res_nind_rps2$fittedResiduals)
+DHARMa::testDispersion(aer_res_nind_rps2)
+
+#test spatial autocorrelation
+testSpatialAutocorrelation(aer_res_nind_rps2,
+                           aer_groupLocations_con$mX, 
+                           aer_groupLocations_con$mY)
+#no spatial autocorrelation p=0.06
+
+#saveRDS(res_nind_rps_aer,paste0(results_dir,"res_nind_rps_aer.rds"))
+
+#trap ------
+ggplot(contrap)+
+  geom_histogram(aes(x=indivs_per_day))+
+  facet_wrap(.~dist)
+
+contrap$indivs_per_day_offset <- contrap$indivs_per_day+0.0001
+
+## removal type * period -----
+res_nind_rp_trap=glmmTMB(indivs_per_day_offset~
+                           (1|animalid)+
+                           Removal.Type*removal.period.akdecalc,
+                         data=contrap,
+                         family=Gamma(link="log")
+                         )
+
+trap_res_nind_rp <- simulateResiduals(res_nind_rp_trap)
+trap_res_nind_rp2 = recalculateResiduals(trap_res_nind_rp, 
+                                         group = as.factor(contrap$animalid), 
+                                         rotation="estimated")
+plot(trap_res_nind_rp2)
+plot(trap_res_nind_rp2$simulatedResponse)
+descdist(trap_res_nind_rp2$fittedResiduals)
+DHARMa::testDispersion(trap_res_nind_rp2)
+
+#test spatial autocorrelation
+testSpatialAutocorrelation(trap_res_nind_rp2,
+                           trap_groupLocations_con$mX, 
+                           trap_groupLocations_con$mY)
+#spatial autocorrelation p=0.02
+
+#correcting for spatial autocorrelation
+spatial_res <- 1000
+mesh_cutoff=0.5
+contrap$mX_sc <- floor(contrap$mX/spatial_res)
+contrap$mY_sc <- floor(contrap$mY/spatial_res)
+meshtrap_con <- make_mesh(contrap,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
+
+res_nind_rp_trap_sf = sdmTMB(indivs_per_day_offset~
+                               (1|animalid)+
+                               Removal.Type*removal.period.akdecalc,
+                             data=contrap,
+                             family=Gamma(link="log"),
+                             mesh=meshtrap_con,
+                             spatial="on")
+
+sanity(res_nind_rp_trap_sf)
+trap_res_nind_rp_sf <- simulate(res_nind_rp_trap_sf,
+                           nsim = 544,type = 'mle-mvn') %>%
+  dharma_residuals(res_nind_rp_trap_sf, return_DHARMa = TRUE)
+trap_res_nind_rp_sf2 = recalculateResiduals(trap_res_nind_rp_sf,
+                                       group = as.factor(contrap$animalid),
+                                       rotation="estimated")
+testSpatialAutocorrelation(trap_res_nind_rp_sf2,
+                           trap_groupLocations_con$mX,
+                           trap_groupLocations_con$mY)
+#no spatial autocorrelation p=0.08
+
+#saveRDS(res_nind_rp_trap_sf,paste0(results_dir,"res_nind_rp_trap.rds"))
+
+## removal type * period *sex -----
+res_nind_rps_trap=glmmTMB(indivs_per_day_offset~
+                            (1|animalid)+
+                            Removal.Type*removal.period.akdecalc*sex,
+                          data=contrap,
+                          family=Gamma(link="log")
+                          )
+
+trap_res_nind_rps <- simulateResiduals(res_nind_rps_trap)
+trap_res_nind_rps2 = recalculateResiduals(trap_res_nind_rps, 
+                                          group = as.factor(contrap$animalid), 
+                                          rotation="estimated")
+plot(trap_res_nind_rps2)
+plot(trap_res_nind_rps2$simulatedResponse)
+descdist(trap_res_nind_rps2$fittedResiduals)
+DHARMa::testDispersion(trap_res_nind_rps2)
+
+#test spatial autocorrelation
+testSpatialAutocorrelation(trap_res_nind_rps2,
+                           trap_groupLocations_con$mX, 
+                           trap_groupLocations_con$mY)
+#no patial autocorrelation p=0.06
+
+#saveRDS(res_nind_rps_trap,paste0(results_dir,"res_nind_rps_trap.rds"))
+
+#tox ------
+ggplot(contox)+
+  geom_histogram(aes(x=indivs_per_day))+
+  facet_wrap(.~dist)
+
+contox$indivs_per_day_offset <- contox$indivs_per_day+0.0001
+
+## removal type * period -----
+res_nind_rp_tox=glmmTMB(indivs_per_day_offset~
+                          (1|animalid)+
+                          Removal.Type*removal.period.akdecalc,
+                        data=contox,
+                        family=Gamma(link="log")
+                        )
+tox_res_nind_rp <- simulateResiduals(res_nind_rp_tox)
+tox_res_nind_rp2 = recalculateResiduals(tox_res_nind_rp, 
+                                        group = as.factor(contox$animalid), 
+                                        rotation="estimated")
+plot(tox_res_nind_rp2)
+plot(tox_res_nind_rp2$simulatedResponse)
+descdist(tox_res_nind_rp2$fittedResiduals)
+DHARMa::testDispersion(tox_res_nind_rp2)
+
+#test spatial autocorrelation
+testSpatialAutocorrelation(tox_res_nind_rp2,
+                           tox_groupLocations_con$mX, 
+                           tox_groupLocations_con$mY)
+#spatial autocorrelation p=0.000005
+
+#correcting for spatial autocorrelation
+spatial_res <- 1000
+mesh_cutoff=1
+contox$mX_sc <- floor(contox$mX/spatial_res)
+contox$mY_sc <- floor(contox$mY/spatial_res)
+meshtox_con <- make_mesh(contox,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
+
+res_nind_rp_tox_sf = sdmTMB(indivs_per_day_offset~
+                               (1|animalid)+
+                               Removal.Type*removal.period.akdecalc,
+                             data=contox,
+                             family=Gamma(link="log"),
+                             mesh=meshtox_con,
+                             spatial="on")
+
+sanity(res_nind_rp_tox_sf)
+tox_res_nind_rp_sf <- simulate(res_nind_rp_tox_sf,
+                                nsim = 544,type = 'mle-mvn') %>%
+  dharma_residuals(res_nind_rp_tox_sf, return_DHARMa = TRUE)
+tox_res_nind_rp_sf2 = recalculateResiduals(tox_res_nind_rp_sf,
+                                            group = as.factor(contox$animalid),
+                                            rotation="estimated")
+testSpatialAutocorrelation(tox_res_nind_rp_sf2,
+                           tox_groupLocations_con$mX,
+                           tox_groupLocations_con$mY)
+#no spatial autocorrelation p=0.13
+
+#saveRDS(res_nind_rp_tox_sf,paste0(results_dir,"res_nind_rp_tox.rds"))
+
+## removal type * period *sex -----
+res_nind_rps_tox=glmmTMB(indivs_per_day_offset~
+                           (1|animalid)+
+                           Removal.Type*removal.period.akdecalc*sex,
+                         data=contox,
+                         family=Gamma(link="log")
+                         )
+
+tox_res_nind_rps <- simulateResiduals(res_nind_rps_tox)
+tox_res_nind_rps2 = recalculateResiduals(tox_res_nind_rps, 
+                                         group = as.factor(contox$animalid), 
+                                         rotation="estimated")
+plot(tox_res_nind_rps2)
+plot(tox_res_nind_rps2$simulatedResponse)
+descdist(tox_res_nind_rps2$fittedResiduals)
+DHARMa::testDispersion(tox_res_nind_rps2)
+
+#test spatial autocorrelation
+testSpatialAutocorrelation(tox_res_nind_rps2,
+                           tox_groupLocations_con$mX, 
+                           tox_groupLocations_con$mY)
+#spatial autocorrelation p=0.00007
+
+#correcting for spatial autocorrelation
+# spatial_res <- 1000
+# mesh_cutoff=1
+# contox$mX_sc <- floor(contox$mX/spatial_res)
+# contox$mY_sc <- floor(contox$mY/spatial_res)
+# meshtox_con <- make_mesh(contox,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
+
+res_nind_rps_tox_sf = sdmTMB(indivs_per_day_offset~
+                              (1|animalid)+
+                              Removal.Type*removal.period.akdecalc*sex,
+                            data=contox,
+                            family=Gamma(link="log"),
+                            mesh=meshtox_con,
+                            spatial="on")
+
+sanity(res_nind_rps_tox_sf)
+tox_res_nind_rps_sf <- simulate(res_nind_rps_tox_sf,
+                               nsim = 544,type = 'mle-mvn') %>%
+  dharma_residuals(res_nind_rps_tox_sf, return_DHARMa = TRUE)
+tox_res_nind_rps_sf2 = recalculateResiduals(tox_res_nind_rps_sf,
+                                           group = as.factor(contox$animalid),
+                                           rotation="estimated")
+testSpatialAutocorrelation(tox_res_nind_rps_sf2,
+                           tox_groupLocations_con$mX,
+                           tox_groupLocations_con$mY)
+#no spatial autocorrelation p=0.08
+
+#saveRDS(res_nind_rps_tox_sf,paste0(results_dir,"res_nind_rps_tox.rds"))
+
+ci_model_list=list(res_nind_rp_aer,
+                  res_nind_rps_aer,
+                  res_nind_rp_trap_sf,
+                  res_nind_rps_trap,
+                  res_nind_rp_tox_sf,
+                  res_nind_rps_tox_sf)
+
+
+#saveRDS(conaer,paste0(results_dir,"conaer.rds"))
+#saveRDS(contox,paste0(results_dir,"contox.rds"))
+#saveRDS(contrap,paste0(results_dir,"contrap.rds"))
+
 # Format model info -----------------------------------------------------------
 mods<-list(res_distance_rp_aer,
            res_distance_rps_aer,
@@ -433,17 +1032,37 @@ mods<-list(res_distance_rp_aer,
            res_speed_rps_trap)
 
 models=c("res_distance_rp_aer",
-            "res_distance_rps_aer",
-            "res_distance_rp_tox",
-            "res_distance_rps_tox",
-            "res_distance_rp_trap",
-            "res_distance_rps_trap",
-            "res_speed_rp_aer",
-            "res_speed_rps_aer",
-            "res_speed_rp_tox",
-            "res_speed_rps_tox",
-            "res_speed_rp_trap",
-            "res_speed_rps_trap")
+         "res_distance_rps_aer",
+         "res_distance_rp_tox",
+         "res_distance_rps_tox",
+         "res_distance_rp_trap",
+         "res_distance_rps_trap",
+         "res_speed_rp_aer",
+         "res_speed_rps_aer",
+         "res_speed_rp_tox",
+         "res_speed_rps_tox",
+         "res_speed_rp_trap",
+         "res_speed_rps_trap")
+
+cn_mods=cn_model_list
+cn_models=c("res_ncon_rp_tox",
+                "res_ncon_rps_tox",
+                "res_ncon_rps_trap",
+                "res_ncon_rp_trap",
+                "res_ncon_rps_aer",
+                "res_ncon_rp_aer")
+
+ci_mods=ci_model_list
+ci_models=c("res_nind_rp_aer",
+               "res_nind_rps_aer",
+               "res_nind_rp_trap",
+               "res_nind_rps_trap",
+               "res_nind_rp_tox",
+               "res_nind_rps_tox")
+
+#pull in contact models
+mods=c(mods,cn_mods,ci_mods)
+models=c(models,cn_models,ci_models)
 
 # * Format model prediction df -----------
 for(i in 1:length(mods)){
@@ -452,7 +1071,7 @@ for(i in 1:length(mods)){
   #if(class(mods[[i]])=="glmmTMB"){
   #coefs=summary(mods[[i]])$coef$cond
   if(length(grep("rps",models[i]))==0){
-  tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","removal.period.akdecalc")))
+    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","removal.period.akdecalc")))
     tmp$facet=NA
   } else{
     tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","removal.period.akdecalc","sex")))
@@ -484,19 +1103,19 @@ preds$response=NA
 preds$response[grep("speed",preds$model)]<-"speed"
 preds$response[grep("distance",preds$model)]<-"distance"
 
-# Pull interactions table ------------------------------------------------------
+# * Pull interactions table ------------------------------------------------------
 
 for(i in 1:length(mods)){
   
   if(class(mods[[i]])=="sdmTMB"){
-  df=broom.mixed::tidy(mods[[i]]) %>% as.data.frame()
-  z=df$estimate/df$std.error
-  df$p=exp(-0.717*z-0.416*z^2)
-  df$model=models[i]
-  df=df[,c(2,3,4,5,1)]
-  df=as.data.frame(df[grep(":",df$term),])
-  colnames(df)=c("Estimate","Std. Error","Pr(>|z|)","model","effect")
-  
+    df=broom.mixed::tidy(mods[[i]]) %>% as.data.frame()
+    z=df$estimate/df$std.error
+    df$p=exp(-0.717*z-0.416*z^2)
+    df$model=models[i]
+    df=df[,c(2,3,4,5,1)]
+    df=as.data.frame(df[grep(":",df$term),])
+    colnames(df)=c("Estimate","Std. Error","Pr(>|z|)","model","effect")
+    
   } else{
     #Pull coefficients
     coefs=summary(mods[[i]])$coef$cond
@@ -565,13 +1184,13 @@ allc$sex[is.na(allc$sex)]<-"whole"
 allc$alpha=0.1
 allc$alpha[allc$`Pr(>|z|)`<0.05]<-1
 
-# Combine full parameter tables -----------------------------------------------------------
+# * Combine full parameter tables -----------------------------------------------------------
 for(i in 1:length(mods)){
   if(class(mods[[i]])=="sdmTMB"){
-  df=broom.mixed::tidy(mods[[i]])
-  df$statistic=df$estimate/df$std.error
-  df$p.value=exp(-0.717*df$statistic-0.416*df$statistic^2)
-  df<-as.data.frame(df)
+    df=broom.mixed::tidy(mods[[i]])
+    df$statistic=df$estimate/df$std.error
+    df$p.value=exp(-0.717*df$statistic-0.416*df$statistic^2)
+    df<-as.data.frame(df)
   }
   
   #add statistic, p value
@@ -595,587 +1214,12 @@ for(i in 1:length(mods)){
   
 }
 
-# Save tidied model output ----------------
+# * Save tidied model output ----------------
 outdir=file.path(homedir,"3_Output",fsep=.Platform$file.sep)
 if(!dir.exists(file.path(outdir,"Model_Output"))){dir.create(file.path(outdir,"Model_Output"))}
 saveRDS(preds,file.path(outdir,"Model_Output","spdist_preds.rds"))
 saveRDS(allc,file.path(outdir,"Model_Output","spdist_intxns.rds"))
 saveRDS(parms,file.path(outdir,"Model_Output","spdist_full_param.rds"))
 
-# contacts - number --------
-## aerial ------------
-conaer <- readRDS(paste0(objdir,"/pairwise_contacts_aer.rds"))
 
-conaer$Removal.Type <- 
-  factor(conaer$trt_typ,levels=c('ctrl','trt'))
-conaer$removal.period.akdecalc <- 
-  factor(conaer$removal.period.akdecalc,levels=c('before','after'))
 
-#distance thresholds
-ggplot(conaer)+
-  geom_histogram(aes(x=contacts_per_day))+
-  facet_wrap(.~dist)
-
-conaer <- conaer %>% filter(dist==10)
-
-conaer <- conaer %>% left_join(
-  geo.aer %>% 
-    group_by(animalid,removal.period.akdecalc) %>% 
-    summarise(mX=mean(X),
-              mY=mean(Y)))
-
-conaer$animalid <- 
-  factor(conaer$animalid)
-
-conaer$contacts_per_day_offset <- conaer$contacts_per_day+0.0001
-
-conaer %>% group_by(contacts_per_day==0) %>% summarise(n=n())
-
-## removal type * period -----
-res_ncon_rp_aer=glmmTMB(contacts_per_day_offset~(1|animalid)+
-                          Removal.Type*removal.period.akdecalc,
-                        data=conaer,
-                        family=Gamma(link="log")
-)
-
-aer_res_ncon_rp <- simulateResiduals(res_ncon_rp_aer)
-aer_res_ncon_rp2 = recalculateResiduals(aer_res_ncon_rp, 
-                                        group = as.factor(conaer$animalid), 
-                                        rotation="estimated")
-plot(aer_res_ncon_rp2)
-plot(aer_res_ncon_rp2$simulatedResponse)
-descdist(aer_res_ncon_rp2$fittedResiduals)
-DHARMa::testDispersion(aer_res_ncon_rp2)
-
-#test spatial autocorrelation
-aer_groupLocations_con = aggregate(conaer[,c("mX","mY")],
-                                    list(conaer$animalid),
-                                    mean)
-testSpatialAutocorrelation(aer_res_ncon_rp2,
-                           aer_groupLocations_con$mX, 
-                           aer_groupLocations_con$mY)
-#spatially autocorrelated p-value = 0.002235
-
-#correcting spatial autocorrelation
-spatial_res <- 1000
-mesh_cutoff=0.5
-conaer$mX_sc <- floor(conaer$mX/spatial_res)
-conaer$mY_sc <- floor(conaer$mY/spatial_res)
-meshaer_con <- make_mesh(conaer,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
-
-res_ncon_rp_aer_sf = sdmTMB(contacts_per_day_offset~
-                              (1|animalid)+
-                               Removal.Type*removal.period.akdecalc,
-                             data=conaer,
-                             family=Gamma(link="log"),
-                             mesh=meshaer_con,
-                             spatial="on")
-
-sanity(res_ncon_rp_aer_sf)
-aer_res_rp_sf <- simulate(res_ncon_rp_aer_sf, 
-                          nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_ncon_rp_aer_sf, return_DHARMa = TRUE)
-aer_res_rp_sf2 = recalculateResiduals(aer_res_rp_sf,
-                                      group = as.factor(conaer$animalid),
-                                      rotation="estimated")
-testSpatialAutocorrelation(aer_res_rp_sf2,
-                           aer_groupLocations_con$mX,
-                           aer_groupLocations_con$mY)
-
-saveRDS(res_ncon_rp_aer_sf,paste0(results_dir,"res_ncon_rp_aer.rds"))
-
-## removal type * period *sex -----
-res_ncon_rps_aer=glmmTMB(contacts_per_day_offset~
-                           (1|animalid)+
-                           Removal.Type*removal.period.akdecalc*sex,
-                         data=conaer,
-                         family=Gamma(link="log")
-)
-
-aer_res_ncon_rps <- simulateResiduals(res_ncon_rps_aer)
-aer_res_ncon_rps2 = recalculateResiduals(aer_res_ncon_rps, 
-                                        group = as.factor(conaer$animalid), 
-                                        rotation="estimated")
-plot(aer_res_ncon_rps2)
-plot(aer_res_ncon_rps2$simulatedResponse)
-descdist(aer_res_ncon_rps2$fittedResiduals)
-DHARMa::testDispersion(aer_res_ncon_rps2)
-
-#test spatial autocorrelation
-testSpatialAutocorrelation(aer_res_ncon_rps2,
-                           aer_groupLocations_con$mX, 
-                           aer_groupLocations_con$mY)
-# spatial autocorrelation p=0.02
-
-#correcting for spatial autocorrelation
-### NOTE: model overparameterized, very poor fit
-spatial_res <- 1000
-mesh_cutoff=4
-conaer$mX_sc <- floor(conaer$mX/spatial_res)
-conaer$mY_sc <- floor(conaer$mY/spatial_res)
-meshaer_con <- make_mesh(conaer,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
-
-res_ncon_rps_aer_sf = sdmTMB(contacts_per_day_offset~
-                               (1|animalid)+
-                              Removal.Type*removal.period.akdecalc*sex,
-                            data=conaer,
-                            family=Gamma(link="log"),
-                            mesh=meshaer_con,
-                            spatial="on")
-
-sanity(res_ncon_rps_aer_sf)
-aer_res_rps_sf <- simulate(res_ncon_rps_aer_sf,
-                          nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_ncon_rp_aer_sf, return_DHARMa = TRUE)
-aer_res_rps_sf2 = recalculateResiduals(aer_res_rps_sf,
-                                      group = as.factor(conaer$animalid),
-                                      rotation="estimated")
-testSpatialAutocorrelation(aer_res_rps_sf2,
-                           aer_groupLocations_con$mX,
-                           aer_groupLocations_con$mY)
-
-saveRDS(res_ncon_rps_aer,paste0(results_dir,"res_ncon_rps_aer.rds"))
-
-#trap ------
-contrap <- readRDS(paste0(objdir,"/pairwise_contacts_trap.rds"))
-
-contrap$Removal.Type <- 
-  factor(contrap$trt_typ,levels=c('ctrl','trt'))
-contrap$removal.period.akdecalc <- 
-  factor(contrap$removal.period.akdecalc,levels=c('before','during','after'))
-
-#distance thresholds
-ggplot(contrap)+
-  geom_histogram(aes(x=contacts_per_day))+
-  facet_wrap(.~dist)
-
-contrap <- contrap %>% filter(dist==10)
-
-contrap <- contrap %>% left_join(
-  geo.trap %>% 
-    group_by(animalid) %>% 
-    summarise(mX=mean(X),
-              mY=mean(Y)))
-
-contrap$animalid <- 
-  factor(contrap$animalid)
-
-contrap$contacts_per_day_offset <- contrap$contacts_per_day+0.0001
-
-contrap %>% group_by(contacts_per_day==0) %>% summarise(n=n())
-
-## removal type * period -----
-res_ncon_rp_trap=glmmTMB(contacts_per_day_offset~(1|animalid)+
-                           Removal.Type*removal.period.akdecalc,
-                         data=contrap,
-                         family=Gamma(link="log")
-                         )
-trap_res_ncon_rp <- simulateResiduals(res_ncon_rp_trap)
-trap_res_ncon_rp2 = recalculateResiduals(trap_res_ncon_rp, 
-                                        group = as.factor(contrap$animalid), 
-                                        rotation="estimated")
-plot(trap_res_ncon_rp2)
-plot(trap_res_ncon_rp2$simulatedResponse)
-descdist(trap_res_ncon_rp2$fittedResiduals)
-DHARMa::testDispersion(trap_res_ncon_rp2)
-
-#test spatial autocorrelation
-trap_groupLocations_con = aggregate(contrap[,c("mX","mY")], 
-                                    list(contrap$animalid), 
-                                    mean)
-testSpatialAutocorrelation(trap_res_ncon_rp2,
-                           trap_groupLocations_con$mX, 
-                           trap_groupLocations_con$mY)
-#spatial autocorrelation p=0.02
-
-#correcting for spatial autocorrelation
-spatial_res <- 1000
-mesh_cutoff=0.5
-contrap$mX_sc <- floor(contrap$mX/spatial_res)
-contrap$mY_sc <- floor(contrap$mY/spatial_res)
-meshtrap_con <- make_mesh(contrap,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
-
-res_ncon_rp_trap_sf = sdmTMB(contacts_per_day_offset~(1|animalid)+
-                              Removal.Type*removal.period.akdecalc*sex,
-                            data=contrap,
-                            family=Gamma(link="log"),
-                            mesh=meshtrap_con,
-                            spatial="on")
-
-sanity(res_ncon_rp_trap_sf)
-trap_res_rp_sf <- simulate(res_ncon_rp_trap_sf,
-                          nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_ncon_rp_trap_sf, return_DHARMa = TRUE)
-trap_res_rp_sf2 = recalculateResiduals(trap_res_rp_sf,
-                                      group = as.factor(contrap$animalid),
-                                      rotation="estimated")
-testSpatialAutocorrelation(trap_res_rp_sf2,
-                           trap_groupLocations_con$mX,
-                           trap_groupLocations_con$mY)
-#spatial autocorrelation p=0.19
-
-saveRDS(res_ncon_rp_trap_sf,paste0(results_dir,"res_ncon_rp_trap.rds"))
-
-## removal type * period *sex -----
-res_ncon_rps_trap=glmmTMB(contacts_per_day_offset~
-                            (1|animalid)+
-                            Removal.Type*removal.period.akdecalc*sex,
-                          data=contrap,
-                          family=Gamma(link="log")
-                          )
-trap_res_ncon_rps <- simulateResiduals(res_ncon_rps_trap)
-trap_res_ncon_rps2 = recalculateResiduals(trap_res_ncon_rps, 
-                                         group = as.factor(contrap$animalid), 
-                                         rotation="estimated")
-plot(trap_res_ncon_rps2)
-plot(trap_res_ncon_rps2$simulatedResponse)
-descdist(trap_res_ncon_rps2$fittedResiduals)
-DHARMa::testDispersion(trap_res_ncon_rps2)
-
-#test spatial autocorrelation
-testSpatialAutocorrelation(trap_res_ncon_rps2,
-                           trap_groupLocations_con$mX, 
-                           trap_groupLocations_con$mY)
-#no spatial autocorrelation p=0.08
-
-saveRDS(res_ncon_rps_trap,paste0(results_dir,"res_ncon_rps_trap.rds"))
-
-#tox ------
-contox <- readRDS(paste0(objdir,"/pairwise_contacts_tox.rds"))
-
-contox$Removal.Type <- 
-  factor(contox$trt_typ,levels=c('ctrl','trt'))
-contox$removal.period.akdecalc <- 
-  factor(contox$removal.period.akdecalc,levels=c('before','during','after'))
-
-#distance thresholds
-ggplot(contox)+
-  geom_histogram(aes(x=contacts_per_day))+
-  facet_wrap(.~dist)
-
-contox <- contox %>% filter(dist==10)
-
-contox <- contox %>% left_join(
-  geo.tox %>% 
-    group_by(animalid) %>% 
-    summarise(mX=mean(X),
-              mY=mean(Y)))
-
-contox$animalid <- 
-  factor(contox$animalid)
-
-contox$contacts_per_day_offset <- contox$contacts_per_day+0.0001
-
-#remove animals that died
-contox <- contox %>% filter(!is.na(num_contacts))
-
-contox %>% group_by(contacts_per_day==0) %>% summarise(n=n())
-
-## removal type * period -----
-res_ncon_rp_tox=glmmTMB(contacts_per_day_offset~
-                          (1|animalid)+
-                          Removal.Type*removal.period.akdecalc,
-                        data=contox,
-                        family=Gamma(link="log")
-                        )
-tox_res_ncon_rp <- simulateResiduals(res_ncon_rp_tox)
-tox_res_ncon_rp2 = recalculateResiduals(tox_res_ncon_rp, 
-                                        group = as.factor(contox$animalid), 
-                                        rotation="estimated")
-plot(tox_res_ncon_rp2)
-plot(tox_res_ncon_rp2$simulatedResponse)
-descdist(tox_res_ncon_rp2$fittedResiduals)
-DHARMa::testDispersion(tox_res_ncon_rp2)
-
-#test spatial autocorrelation
-tox_groupLocations_con = aggregate(contox[,c("mX","mY")], 
-                                   list(contox$animalid), 
-                                   mean)
-testSpatialAutocorrelation(tox_res_ncon_rp2,
-                           tox_groupLocations_con$mX, 
-                           tox_groupLocations_con$mY)
-#no spatial autocorrelation p=0.77
-
-saveRDS(res_ncon_rp_tox,paste0(results_dir,"res_ncon_rp_tox.rds"))
-
-## removal type * period *sex -----
-res_ncon_rps_tox=glmmTMB(contacts_per_day_offset~
-                           (1|animalid)+
-                           Removal.Type*removal.period.akdecalc,
-                         data=contox,
-                         family=Gamma(link="log")
-                         )
-
-tox_res_ncon_rps <- simulateResiduals(res_ncon_rps_tox)
-tox_res_ncon_rps2 = recalculateResiduals(tox_res_ncon_rps, 
-                                         group = as.factor(contox$animalid), 
-                                         rotation="estimated")
-plot(tox_res_ncon_rps2)
-plot(tox_res_ncon_rps2$simulatedResponse)
-descdist(tox_res_ncon_rps2$fittedResiduals)
-DHARMa::testDispersion(tox_res_ncon_rps2)
-
-#test spatial autocorrelation
-testSpatialAutocorrelation(tox_res_ncon_rps2,
-                           tox_groupLocations_con$mX, 
-                           tox_groupLocations_con$mY)
-#no spatial autocorrelation p=0.77
-
-saveRDS(res_ncon_rps_tox,paste0(results_dir,"res_ncon_rps_tox.rds"))
-
-
-# contacts - degree --------
-ggplot(conaer)+
-  geom_histogram(aes(x=indivs_per_day))+
-  facet_wrap(.~dist)
-
-conaer$indivs_per_day_offset <- conaer$indivs_per_day+0.0001
-
-#aerial ------
-## removal type * period -----
-res_nind_rp_aer=glmmTMB(indivs_per_day_offset~
-                          (1|animalid)+
-                          Removal.Type*removal.period.akdecalc,
-                        data=conaer,
-                        family=Gamma(link="log")
-                        )
-
-aer_res_nind_rp <- simulateResiduals(res_nind_rp_aer)
-aer_res_nind_rp2 = recalculateResiduals(aer_res_nind_rp, 
-                                        group = as.factor(conaer$animalid), 
-                                        rotation="estimated")
-plot(aer_res_nind_rp2)
-plot(aer_res_nind_rp2$simulatedResponse)
-descdist(aer_res_nind_rp2$fittedResiduals)
-DHARMa::testDispersion(aer_res_nind_rp2)
-
-#test spatial autocorrelation
-testSpatialAutocorrelation(aer_res_nind_rp2,
-                           aer_groupLocations_con$mX, 
-                           aer_groupLocations_con$mY)
-#no spatial autocorrelation p=0.09
-
-saveRDS(res_nind_rp_aer,paste0(results_dir,"res_nind_rp_aer.rds"))
-
-## removal type * period *sex -----
-res_nind_rps_aer=glmmTMB(indivs_per_day_offset~
-                           (1|animalid)+
-                           Removal.Type*removal.period.akdecalc*sex,
-                         data=conaer,
-                         family=Gamma(link="log")
-                         )
-
-aer_res_nind_rps <- simulateResiduals(res_nind_rps_aer)
-aer_res_nind_rps2 = recalculateResiduals(aer_res_nind_rps, 
-                                         group = as.factor(conaer$animalid), 
-                                         rotation="estimated")
-plot(aer_res_nind_rps2)
-plot(aer_res_nind_rps2$simulatedResponse)
-descdist(aer_res_nind_rps2$fittedResiduals)
-DHARMa::testDispersion(aer_res_nind_rps2)
-
-#test spatial autocorrelation
-testSpatialAutocorrelation(aer_res_nind_rps2,
-                           aer_groupLocations_con$mX, 
-                           aer_groupLocations_con$mY)
-#no spatial autocorrelation p=0.06
-
-saveRDS(res_nind_rps_aer,paste0(results_dir,"res_nind_rps_aer.rds"))
-
-#trap ------
-ggplot(contrap)+
-  geom_histogram(aes(x=indivs_per_day))+
-  facet_wrap(.~dist)
-
-contrap$indivs_per_day_offset <- contrap$indivs_per_day+0.0001
-
-## removal type * period -----
-res_nind_rp_trap=glmmTMB(indivs_per_day_offset~
-                           (1|animalid)+
-                           Removal.Type*removal.period.akdecalc,
-                         data=contrap,
-                         family=Gamma(link="log")
-                         )
-
-trap_res_nind_rp <- simulateResiduals(res_nind_rp_trap)
-trap_res_nind_rp2 = recalculateResiduals(trap_res_nind_rp, 
-                                         group = as.factor(contrap$animalid), 
-                                         rotation="estimated")
-plot(trap_res_nind_rp2)
-plot(trap_res_nind_rp2$simulatedResponse)
-descdist(trap_res_nind_rp2$fittedResiduals)
-DHARMa::testDispersion(trap_res_nind_rp2)
-
-#test spatial autocorrelation
-testSpatialAutocorrelation(trap_res_nind_rp2,
-                           trap_groupLocations_con$mX, 
-                           trap_groupLocations_con$mY)
-#spatial autocorrelation p=0.02
-
-#correcting for spatial autocorrelation
-spatial_res <- 1000
-mesh_cutoff=0.5
-contrap$mX_sc <- floor(contrap$mX/spatial_res)
-contrap$mY_sc <- floor(contrap$mY/spatial_res)
-meshtrap_con <- make_mesh(contrap,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
-
-res_nind_rp_trap_sf = sdmTMB(indivs_per_day_offset~
-                               (1|animalid)+
-                               Removal.Type*removal.period.akdecalc,
-                             data=contrap,
-                             family=Gamma(link="log"),
-                             mesh=meshtrap_con,
-                             spatial="on")
-
-sanity(res_nind_rp_trap_sf)
-trap_res_nind_rp_sf <- simulate(res_nind_rp_trap_sf,
-                           nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_nind_rp_trap_sf, return_DHARMa = TRUE)
-trap_res_nind_rp_sf2 = recalculateResiduals(trap_res_nind_rp_sf,
-                                       group = as.factor(contrap$animalid),
-                                       rotation="estimated")
-testSpatialAutocorrelation(trap_res_nind_rp_sf2,
-                           trap_groupLocations_con$mX,
-                           trap_groupLocations_con$mY)
-#no spatial autocorrelation p=0.08
-
-saveRDS(res_nind_rp_trap_sf,paste0(results_dir,"res_nind_rp_trap.rds"))
-
-## removal type * period *sex -----
-res_nind_rps_trap=glmmTMB(indivs_per_day_offset~
-                            (1|animalid)+
-                            Removal.Type*removal.period.akdecalc*sex,
-                          data=contrap,
-                          family=Gamma(link="log")
-                          )
-
-trap_res_nind_rps <- simulateResiduals(res_nind_rps_trap)
-trap_res_nind_rps2 = recalculateResiduals(trap_res_nind_rps, 
-                                          group = as.factor(contrap$animalid), 
-                                          rotation="estimated")
-plot(trap_res_nind_rps2)
-plot(trap_res_nind_rps2$simulatedResponse)
-descdist(trap_res_nind_rps2$fittedResiduals)
-DHARMa::testDispersion(trap_res_nind_rps2)
-
-#test spatial autocorrelation
-testSpatialAutocorrelation(trap_res_nind_rps2,
-                           trap_groupLocations_con$mX, 
-                           trap_groupLocations_con$mY)
-#no patial autocorrelation p=0.06
-
-saveRDS(res_nind_rps_trap,paste0(results_dir,"res_nind_rps_trap.rds"))
-
-#tox ------
-ggplot(contox)+
-  geom_histogram(aes(x=indivs_per_day))+
-  facet_wrap(.~dist)
-
-contox$indivs_per_day_offset <- contox$indivs_per_day+0.0001
-
-## removal type * period -----
-res_nind_rp_tox=glmmTMB(indivs_per_day_offset~
-                          (1|animalid)+
-                          Removal.Type*removal.period.akdecalc,
-                        data=contox,
-                        family=Gamma(link="log")
-                        )
-tox_res_nind_rp <- simulateResiduals(res_nind_rp_tox)
-tox_res_nind_rp2 = recalculateResiduals(tox_res_nind_rp, 
-                                        group = as.factor(contox$animalid), 
-                                        rotation="estimated")
-plot(tox_res_nind_rp2)
-plot(tox_res_nind_rp2$simulatedResponse)
-descdist(tox_res_nind_rp2$fittedResiduals)
-DHARMa::testDispersion(tox_res_nind_rp2)
-
-#test spatial autocorrelation
-testSpatialAutocorrelation(tox_res_nind_rp2,
-                           tox_groupLocations_con$mX, 
-                           tox_groupLocations_con$mY)
-#spatial autocorrelation p=0.000005
-
-#correcting for spatial autocorrelation
-spatial_res <- 1000
-mesh_cutoff=1
-contox$mX_sc <- floor(contox$mX/spatial_res)
-contox$mY_sc <- floor(contox$mY/spatial_res)
-meshtox_con <- make_mesh(contox,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
-
-res_nind_rp_tox_sf = sdmTMB(indivs_per_day_offset~
-                               (1|animalid)+
-                               Removal.Type*removal.period.akdecalc,
-                             data=contox,
-                             family=Gamma(link="log"),
-                             mesh=meshtox_con,
-                             spatial="on")
-
-sanity(res_nind_rp_tox_sf)
-tox_res_nind_rp_sf <- simulate(res_nind_rp_tox_sf,
-                                nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_nind_rp_tox_sf, return_DHARMa = TRUE)
-tox_res_nind_rp_sf2 = recalculateResiduals(tox_res_nind_rp_sf,
-                                            group = as.factor(contox$animalid),
-                                            rotation="estimated")
-testSpatialAutocorrelation(tox_res_nind_rp_sf2,
-                           tox_groupLocations_con$mX,
-                           tox_groupLocations_con$mY)
-#no spatial autocorrelation p=0.13
-
-saveRDS(res_nind_rp_tox_sf,paste0(results_dir,"res_nind_rp_tox.rds"))
-
-## removal type * period *sex -----
-res_nind_rps_tox=glmmTMB(indivs_per_day_offset~
-                           (1|animalid)+
-                           Removal.Type*removal.period.akdecalc*sex,
-                         data=contox,
-                         family=Gamma(link="log")
-                         )
-
-tox_res_nind_rps <- simulateResiduals(res_nind_rps_tox)
-tox_res_nind_rps2 = recalculateResiduals(tox_res_nind_rps, 
-                                         group = as.factor(contox$animalid), 
-                                         rotation="estimated")
-plot(tox_res_nind_rps2)
-plot(tox_res_nind_rps2$simulatedResponse)
-descdist(tox_res_nind_rps2$fittedResiduals)
-DHARMa::testDispersion(tox_res_nind_rps2)
-
-#test spatial autocorrelation
-testSpatialAutocorrelation(tox_res_nind_rps2,
-                           tox_groupLocations_con$mX, 
-                           tox_groupLocations_con$mY)
-#spatial autocorrelation p=0.00007
-
-#correcting for spatial autocorrelation
-# spatial_res <- 1000
-# mesh_cutoff=1
-# contox$mX_sc <- floor(contox$mX/spatial_res)
-# contox$mY_sc <- floor(contox$mY/spatial_res)
-# meshtox_con <- make_mesh(contox,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
-
-res_nind_rps_tox_sf = sdmTMB(indivs_per_day_offset~
-                              (1|animalid)+
-                              Removal.Type*removal.period.akdecalc*sex,
-                            data=contox,
-                            family=Gamma(link="log"),
-                            mesh=meshtox_con,
-                            spatial="on")
-
-sanity(res_nind_rps_tox_sf)
-tox_res_nind_rps_sf <- simulate(res_nind_rps_tox_sf,
-                               nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_nind_rps_tox_sf, return_DHARMa = TRUE)
-tox_res_nind_rps_sf2 = recalculateResiduals(tox_res_nind_rps_sf,
-                                           group = as.factor(contox$animalid),
-                                           rotation="estimated")
-testSpatialAutocorrelation(tox_res_nind_rps_sf2,
-                           tox_groupLocations_con$mX,
-                           tox_groupLocations_con$mY)
-#no spatial autocorrelation p=0.08
-
-saveRDS(res_nind_rps_tox_sf,paste0(results_dir,"res_nind_rps_tox.rds"))
-
-saveRDS(conaer,paste0(results_dir,"conaer.rds"))
-saveRDS(contox,paste0(results_dir,"contox.rds"))
-saveRDS(contrap,paste0(results_dir,"contrap.rds"))
