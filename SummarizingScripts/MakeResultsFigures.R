@@ -353,6 +353,9 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   trap_ppt=cowplot::plot_grid(t_nsd_w,t_dis_w,t_sp_w,nrow=1,rel_widths=c(0.65,0.65,0.65))
   ggsave("~/Downloads/s_trapppt.png",trap_ppt,width=9,height=2,units="in")
   
-  aer_ppt=cowplot::plot_grid(x_nsd_w,x_dis_w,x_sp_w,x_are_w,nrow=1,rel_widths=c(0.65,0.65,0.65,0.65))
-  ggsave("~/Downloads/s_toxppt.png",aer_ppt,width=9,height=2,units="in")
+  tox_ppt=cowplot::plot_grid(x_nsd_w,x_dis_w,x_sp_w,x_are_w,nrow=1,rel_widths=c(0.65,0.65,0.65,0.5))
+  ggsave("~/Downloads/s_toxppt.png",tox_ppt,width=11,height=2,units="in")
+
+  
+  
   

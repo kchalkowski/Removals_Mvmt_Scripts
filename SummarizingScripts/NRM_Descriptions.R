@@ -1,3 +1,6 @@
+library(ggplot2)
+library(vistime)
+
 #trap dates
 trap.act=activities.raw[activities.raw$activity=="trap",]
 trap.act$trap_datetime=Neat.Dates.POSIXct(trap.act$trap_datetime,tz="UTC")
@@ -58,7 +61,7 @@ timeline.df$color[timeline.df$Period=="during"&timeline.df$Treatment=="aer"]<-"#
 timeline.df$color[timeline.df$Period=="after"&timeline.df$Treatment=="aer"]<-"#311854"
 timeline.df$color[timeline.df$Period=="before"&timeline.df$Treatment=="trap"]<-"#fcaed4"
 timeline.df$color[timeline.df$Period=="during"&timeline.df$Treatment=="trap"]<-"#FF57A9"
-timeline.df$color[timeline.df$Period=="after"&timeline.df$Treatment=="tox"]<-"#632242"
+timeline.df$color[timeline.df$Period=="after"&timeline.df$Treatment=="trap"]<-"#632242"
 timeline.df$color[timeline.df$Period=="before"&timeline.df$Treatment=="tox"]<-"#ffbf99"
 timeline.df$color[timeline.df$Period=="during"&timeline.df$Treatment=="tox"]<-"#FF985A"
 timeline.df$color[timeline.df$Period=="after"&timeline.df$Treatment=="tox"]<-"#8a4820"

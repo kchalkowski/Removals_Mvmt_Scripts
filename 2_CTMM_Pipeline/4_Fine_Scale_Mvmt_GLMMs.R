@@ -210,7 +210,7 @@ testSpatialAutocorrelation(tox_res_rp2,groupLocations$mX,groupLocations$mY)
 #saveRDS(res_dist_rp_aer,paste0(results_dir,"res_distance_rp_aer.rds"))
 
 #### removal type * period * sex ------
-
+distaer$trt_ctrl=forcats::fct_relevel(distaer$trt_ctrl,c("trt","ctrl"))
 res_distance_rps_aer <-glmmTMB(weekly_dist_km ~ (1|animalid) +
                                  trt_ctrl*removal.period.akdecalc*sex,
                                data=distaer,family=Gamma(link="log"))
