@@ -722,7 +722,7 @@ testSpatialAutocorrelation(tox_res_ncon_rp2,
 ### removal type * period *sex -----
 res_ncon_rps_tox=glmmTMB(contacts_per_day_offset~
                            (1|animalid)+
-                           Removal.Type*removal.period.akdecalc,
+                           Removal.Type*removal.period.akdecalc*sex,
                          data=contox,
                          family=Gamma(link="log")
                          )
@@ -1070,14 +1070,25 @@ for(i in 1:length(mods)){
   #i=8
   #if(class(mods[[i]])=="glmmTMB"){
   #coefs=summary(mods[[i]])$coef$cond
+
   if(length(grep("rps",models[i]))==0){
-    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","removal.period.akdecalc")))
+    #add if statement here and inside else-- if ncon or nind in model name, trt_ctrl is Removal.Type
+    if(length(grep("ncon",models[i]))!=0|
+       length(grep("nind",models[i]))!=0){
+      tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","removal.period.akdecalc")))
+    } else{
+      tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","removal.period.akdecalc")))
+    }
     tmp$facet=NA
   } else{
-    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","removal.period.akdecalc","sex")))
+    if(length(grep("ncon",models[i]))!=0|
+       length(grep("nind",models[i]))!=0){
+      tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","removal.period.akdecalc","sex")))
+      } else{
+        tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","removal.period.akdecalc","sex")))
+      }
   }
   
-  #}
   
   tmp$model=models[i]
   
@@ -1102,6 +1113,9 @@ preds$rem[grep("tox",preds$model)]<-"tox"
 preds$response=NA
 preds$response[grep("speed",preds$model)]<-"speed"
 preds$response[grep("distance",preds$model)]<-"distance"
+preds$response[grep("nind",preds$model)]<-"nind"
+preds$response[grep("ncon",preds$model)]<-"ncon"
+
 
 # * Pull interactions table ------------------------------------------------------
 
@@ -1125,8 +1139,16 @@ for(i in 1:length(mods)){
     if(nrow(coefs2)!=0){
       
       if(nrow(coefs2)>1){
-        coefs2=as.data.frame(coefs2[grep("trt_ctrl",rownames(coefs2)),,drop=FALSE])
-        coefs2=as.data.frame(coefs2[grep("period",rownames(coefs2)),,drop=FALSE])
+        if(length(grep("ncon",models[i]))!=0|
+           length(grep("nind",models[i]))!=0){
+          coefs2=as.data.frame(coefs2[grep("Removal.Type",rownames(coefs2)),,drop=FALSE])
+          coefs2=as.data.frame(coefs2[grep("period",rownames(coefs2)),,drop=FALSE])
+        } else{
+          coefs2=as.data.frame(coefs2[grep("trt_ctrl",rownames(coefs2)),,drop=FALSE])
+          coefs2=as.data.frame(coefs2[grep("period",rownames(coefs2)),,drop=FALSE])
+          
+        }
+        
       }
       
       
@@ -1173,6 +1195,8 @@ allc$trt[grep("tox",allc$model)]<-"tox"
 allc$response=NA
 allc$response[grep("speed",allc$model)]<-"speed"
 allc$response[grep("distance",allc$model)]<-"distance"
+allc$response[grep("ncon",allc$model)]<-"ncon"
+allc$response[grep("nind",allc$model)]<-"nind"
 
 #Remove ugly effect column
 allc=allc[,-which(colnames(allc)=="effect")]
