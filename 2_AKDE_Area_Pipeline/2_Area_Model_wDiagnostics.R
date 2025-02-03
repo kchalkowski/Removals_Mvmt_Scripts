@@ -75,6 +75,11 @@ akaer$Removal.Type<-forcats::fct_relevel(akaer$Removal.Type,c("ctrl","aer"))
 aktrap$Removal.Type<-forcats::fct_relevel(aktrap$Removal.Type,c("ctrl","trap"))
 aktox$Removal.Type<-forcats::fct_relevel(aktox$Removal.Type,c("ctrl","tox"))
 
+#Relevel sex, check male significance level for results figure
+#akaer$sex<-forcats::fct_relevel(akaer$sex,c("Male","Female"))
+#aktrap$sex<-forcats::fct_relevel(aktrap$sex,c("Male","Female"))
+#aktox$sex<-forcats::fct_relevel(aktox$sex,c("Male","Female"))
+
 # Check aerial data spatial autocorrelation -----------------------------------
 {
 res=glmmTMB(area.est~(1|animalid)+Removal.Type*period,data=akaer,family=Gamma(link="log"))

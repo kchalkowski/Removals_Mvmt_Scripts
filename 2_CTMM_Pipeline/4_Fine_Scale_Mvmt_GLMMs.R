@@ -79,6 +79,16 @@ switch(Sys.info()[['sysname']],
   disttrap$removal.period.akdecalc <- factor(disttrap$removal.period.akdecalc,
                                              levels=c('before','during','after'))
   
+  #relevel treatment/ctrl-- ctrl needs be ref
+  distaer$trt_ctrl<-forcats::fct_relevel(distaer$trt_ctrl,c("ctrl","trt"))
+  disttrap$trt_ctrl<-forcats::fct_relevel(disttrap$trt_ctrl,c("ctrl","trt"))
+  disttox$trt_ctrl<-forcats::fct_relevel(disttox$trt_ctrl,c("ctrl","trt"))
+  
+  #temp releveling to get significance of intxn when male is ref
+  #distaer$sex<-forcats::fct_relevel(distaer$sex,c("Male","Female"))
+  #disttrap$sex<-forcats::fct_relevel(disttrap$sex,c("Male","Female"))
+  #disttox$sex<-forcats::fct_relevel(disttox$sex,c("Male","Female"))
+  
 
 ## temporal autocorrelation test --------------
   res_aer=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*removal.period.akdecalc,
@@ -210,7 +220,7 @@ testSpatialAutocorrelation(tox_res_rp2,groupLocations$mX,groupLocations$mY)
 #saveRDS(res_dist_rp_aer,paste0(results_dir,"res_distance_rp_aer.rds"))
 
 #### removal type * period * sex ------
-distaer$trt_ctrl=forcats::fct_relevel(distaer$trt_ctrl,c("trt","ctrl"))
+#distaer$trt_ctrl=forcats::fct_relevel(distaer$trt_ctrl,c("trt","ctrl"))
 res_distance_rps_aer <-glmmTMB(weekly_dist_km ~ (1|animalid) +
                                  trt_ctrl*removal.period.akdecalc*sex,
                                data=distaer,family=Gamma(link="log"))
@@ -282,6 +292,17 @@ res_distance_rps_tox=glmmTMB(weekly_dist_km ~ trt_ctrl*removal.period.akdecalc*s
   speedtrap$removal.period.akdecalc <- factor(speedtrap$removal.period.akdecalc,
                                               levels=c('before','during','after'))
 
+  #relevel treatment/ctrl-- ctrl needs be ref
+  speedaer$trt_ctrl<-forcats::fct_relevel(speedaer$trt_ctrl,c("ctrl","trt"))
+  speedtrap$trt_ctrl<-forcats::fct_relevel(speedtrap$trt_ctrl,c("ctrl","trt"))
+  speedtox$trt_ctrl<-forcats::fct_relevel(speedtox$trt_ctrl,c("ctrl","trt"))
+  
+  #temp releveling to get significance of intxn when male is ref
+  #speedaer$sex<-forcats::fct_relevel(speedaer$sex,c("Male","Female"))
+  #speedtrap$sex<-forcats::fct_relevel(speedtrap$sex,c("Male","Female"))
+  #speedtox$sex<-forcats::fct_relevel(speedtox$sex,c("Male","Female"))
+  
+  
 ## spatial autocorrelation test ------------------
 ## aerial
 aer_tests=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*removal.period.akdecalc,

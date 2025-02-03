@@ -183,10 +183,16 @@ testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
 
 # Run GLMMs --------------------------------------------------------------------
 
+#set relevel for sex, check models for significance when male is ref
+#geo.aerd.wk$sex<-forcats::fct_relevel(geo.aerd.wk$sex,c("Male","Female"))
+#geo.trapd.wk$sex<-forcats::fct_relevel(geo.trapd.wk$sex,c("Male","Female"))
+#geo.toxd.wk$sex<-forcats::fct_relevel(geo.toxd.wk$sex,c("Male","Female"))
+
+
 # * Aerial GLMMs --------------------------------------------------------------------
 geo.wkdf=geo.aerd.wk
 geo.wkdf$removal.period.akdecalc<-forcats::fct_relevel(geo.wkdf$removal.period.akdecalc,c("before","after"))
-geo.wkdf$sex<-forcats::fct_relevel(geo.wkdf$sex,c("Female","Male"))
+#geo.wkdf$sex<-forcats::fct_relevel(geo.wkdf$sex,c("Female","Male"))
 res.rp_aer=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.wkdf,family=Gamma(link=log))
 res.rps_aer=glmmTMB(mNSD ~ (1|animalid/week) + Removal.Type*removal.period.akdecalc*sex, data=geo.wkdf,family=Gamma(link=log))
 
@@ -203,7 +209,7 @@ geo.wkdf$pos1 <- numFactor(geo.wkdf$X, geo.wkdf$Y)
 geo.wkdf$pos2 <- numFactor(geo.wkdf$Y, geo.wkdf$Y)
 geo.wkdf$Removal.Type<-forcats::fct_relevel(geo.wkdf$Removal.Type,c("ctrl","trap"))
 geo.wkdf$removal.period.akdecalc<-forcats::fct_relevel(geo.wkdf$removal.period.akdecalc,c("before","during","after"))
-geo.wkdf$sex<-forcats::fct_relevel(geo.wkdf$sex,c("Female","Male"))
+#geo.wkdf$sex<-forcats::fct_relevel(geo.wkdf$sex,c("Female","Male"))
 res.rp_trap=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + exp(pos1 + 0 | animalid) + Removal.Type*removal.period.akdecalc, 
                     data=geo.wkdf,
                     family=Gamma(link=log),
@@ -219,7 +225,7 @@ geo.wkdf$X=round(geo.wkdf$mX/1000)
 geo.wkdf$Y=round(geo.wkdf$mY/1000)
 geo.wkdf$animalid<-factor(geo.wkdf$animalid)
 geo.wkdf$pos <- numFactor(geo.wkdf$X, geo.wkdf$Y)
-geo.wkdf$sex<-forcats::fct_relevel(geo.wkdf$sex,c("Female","Male"))
+#geo.wkdf$sex<-forcats::fct_relevel(geo.wkdf$sex,c("Female","Male"))
 res.rp_tox=glmmTMB(mNSD ~ Removal.Type*removal.period.akdecalc, 
                    data=geo.wkdf,
                    family=Gamma(link=log),
