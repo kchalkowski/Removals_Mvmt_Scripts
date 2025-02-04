@@ -39,8 +39,8 @@ switch(Sys.info()[['sysname']],
   # homedir <- "//aapcoftc3fp13/Projects/MUDD/ASF_NIFA/Pipelines/Removals_Mvmt"
   #homedir <- "C:/Users/Abigail.Feuka/OneDrive - USDA/Feral Hogs/Contact Analysis/Removals_Mvmt"
   objdir=file.path(homedir,"1_Data","Objects",fsep=.Platform$file.sep)
-  results_dir <- file.path(homedir,"/3_Output/",fsep=.Platform$file.sep)
-  
+  results_dir <- file.path(homedir,"3_Output",fsep=.Platform$file.sep)
+
   #pull geo_rem objects
   # georem <- read.csv("./1_Data/Objects/geo_remtyp_period.csv")
   geo.aer<-readRDS(file.path(objdir,"geoaer.rds"))
@@ -55,7 +55,7 @@ switch(Sys.info()[['sysname']],
   
   aktox.sumperiods=aktox %>% group_by(animalid,period) %>% dplyr::summarise(n()) %>% tidyr::pivot_wider(names_from="period",values_from=`n()`) %>% as.data.frame()
   died.tox=aktox.sumperiods[which(is.na(aktox.sumperiods$after)),1]
-  results_dir <- paste0(homedir,"/1_Data/Objects/Models/")
+  #results_dir <- paste0(homedir,"/1_Data/Objects/Models/")
   
   #set mesh cutoff for all spatial models
   mesh_cutoff<-1
@@ -1085,6 +1085,123 @@ ci_models=c("res_nind_rp_aer",
 mods=c(mods,cn_mods,ci_mods)
 models=c(models,cn_models,ci_models)
 
+# * Make gt summary tables----------------------
+
+#source funcs to make gt tables for sdmTMB models
+source(file.path(homedir,"2_Scripts","Functions","Table_Convert_Funcs.R",fsep=.Platform$file.sep))
+
+# ** distance gt summary tables----------------------
+aer_tbl<-make_sdmTMB_gt(res_distance_rp_aer,distaer)
+trap_tbl <- tbl_regression(res_distance_rp_trap, exponentiate = TRUE)
+tox_tbl<-make_sdmTMB_gt(res_distance_rp_tox,disttox)
+
+dist_tbl=tbl_merge(
+  tbls = list(aer_tbl, 
+              trap_tbl,
+              tox_tbl),
+  tab_spanner = c("aerial","trap","tox")
+) 
+
+saveRDS(dist_tbl,file.path(results_dir,"Model_Output","dist_parm_gt.rds",fsep=.Platform$file.sep))
+
+aer_tbl_s <- tbl_regression(res_distance_rps_aer, exponentiate = TRUE)
+trap_tbl_s <- tbl_regression(res_distance_rps_trap, exponentiate = TRUE)
+tox_tbl_s <- tbl_regression(res_distance_rps_tox, exponentiate = TRUE)
+
+dist_tbl_s=tbl_merge(
+  tbls = list(aer_tbl_s, 
+              trap_tbl_s,
+              tox_tbl_s),
+  tab_spanner = c("aerial","trap","tox")
+) 
+
+saveRDS(dist_tbl_s,file.path(results_dir,"Model_Output","dist_parm_gt_s.rds",fsep=.Platform$file.sep))
+
+# ** speed gt summary tables----------------------
+aer_tbl <- tbl_regression(res_speed_rp_aer, exponentiate = TRUE)
+trap_tbl <- tbl_regression(res_speed_rp_trap, exponentiate = TRUE)
+tox_tbl <- tbl_regression(res_speed_rp_tox, exponentiate = TRUE)
+
+speed_tbl=tbl_merge(
+  tbls = list(aer_tbl, 
+              trap_tbl,
+              tox_tbl),
+  tab_spanner = c("aerial","trap","tox")
+) 
+
+saveRDS(speed_tbl,file.path(outdir,"Model_Output","speed_parm_gt.rds",fsep=.Platform$file.sep))
+
+
+aer_tbl_s <- tbl_regression(res_speed_rps_aer, exponentiate = TRUE)
+trap_tbl_s <- tbl_regression(res_speed_rps_trap, exponentiate = TRUE)
+tox_tbl_s <- tbl_regression(res_speed_rps_tox, exponentiate = TRUE)
+
+speed_tbl_s=tbl_merge(
+  tbls = list(aer_tbl_s, 
+              trap_tbl_s,
+              tox_tbl_s),
+  tab_spanner = c("aerial","trap","tox")
+) 
+
+saveRDS(speed_tbl_s,file.path(outdir,"Model_Output","speed_parm_gt_s.rds",fsep=.Platform$file.sep))
+
+
+# ** ncon gt summary tables----------------------
+aer_tbl <- tbl_regression(res.rp_aer, exponentiate = TRUE)
+trap_tbl <- tbl_regression(res.rp_trap, exponentiate = TRUE)
+tox_tbl <- tbl_regression(res.rp_tox, exponentiate = TRUE)
+
+nsd_tbl=tbl_merge(
+  tbls = list(aer_tbl, 
+              trap_tbl,
+              tox_tbl),
+  tab_spanner = c("aerial","trap","tox")
+) 
+
+saveRDS(nsd_tbl,file.path(outdir,"Model_Output","nsd_parm_gt.rds",fsep=.Platform$file.sep))
+
+
+aer_tbl_s <- tbl_regression(res.rps_aer, exponentiate = TRUE)
+trap_tbl_s <- tbl_regression(res.rps_trap, exponentiate = TRUE)
+tox_tbl_s <- tbl_regression(res.rps_tox, exponentiate = TRUE)
+
+nsd_tbl_s=tbl_merge(
+  tbls = list(aer_tbl_s, 
+              trap_tbl_s,
+              tox_tbl_s),
+  tab_spanner = c("aerial","trap","tox")
+) 
+
+saveRDS(nsd_tbl_s,file.path(outdir,"Model_Output","nsd_parm_gt_s.rds",fsep=.Platform$file.sep))
+
+# ** nind gt summary tables----------------------
+aer_tbl <- tbl_regression(res.rp_aer, exponentiate = TRUE)
+trap_tbl <- tbl_regression(res.rp_trap, exponentiate = TRUE)
+tox_tbl <- tbl_regression(res.rp_tox, exponentiate = TRUE)
+
+nsd_tbl=tbl_merge(
+  tbls = list(aer_tbl, 
+              trap_tbl,
+              tox_tbl),
+  tab_spanner = c("aerial","trap","tox")
+) 
+
+saveRDS(nsd_tbl,file.path(outdir,"Model_Output","nsd_parm_gt.rds",fsep=.Platform$file.sep))
+
+
+aer_tbl_s <- tbl_regression(res.rps_aer, exponentiate = TRUE)
+trap_tbl_s <- tbl_regression(res.rps_trap, exponentiate = TRUE)
+tox_tbl_s <- tbl_regression(res.rps_tox, exponentiate = TRUE)
+
+nsd_tbl_s=tbl_merge(
+  tbls = list(aer_tbl_s, 
+              trap_tbl_s,
+              tox_tbl_s),
+  tab_spanner = c("aerial","trap","tox")
+) 
+
+saveRDS(nsd_tbl_s,file.path(outdir,"Model_Output","nsd_parm_gt_s.rds",fsep=.Platform$file.sep))
+
 # * Format model prediction df -----------
 for(i in 1:length(mods)){
   #i=1
@@ -1260,11 +1377,11 @@ for(i in 1:length(mods)){
 }
 
 # * Save tidied model output ----------------
-outdir=file.path(homedir,"3_Output",fsep=.Platform$file.sep)
-if(!dir.exists(file.path(outdir,"Model_Output"))){dir.create(file.path(outdir,"Model_Output"))}
-saveRDS(preds,file.path(outdir,"Model_Output","spdist_preds.rds"))
-saveRDS(allc,file.path(outdir,"Model_Output","spdist_intxns.rds"))
-saveRDS(parms,file.path(outdir,"Model_Output","spdist_full_param.rds"))
+#outdir=file.path(homedir,"3_Output",fsep=.Platform$file.sep)
+if(!dir.exists(file.path(results_dir,"Model_Output"))){dir.create(file.path(outdir,"Model_Output"))}
+saveRDS(preds,file.path(results_dir,"Model_Output","spdist_preds.rds"))
+saveRDS(allc,file.path(results_dir,"Model_Output","spdist_intxns.rds"))
+saveRDS(parms,file.path(results_dir,"Model_Output","spdist_full_param.rds"))
 
 
 
