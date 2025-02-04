@@ -203,7 +203,7 @@ models=c("res.rp_aer",
          "res.rp_tox",
          "res.rps_tox")
 
-# * try gt summary -----------
+# * Make gt summary table -----------
 library(gt)
 library(gtsummary)
 

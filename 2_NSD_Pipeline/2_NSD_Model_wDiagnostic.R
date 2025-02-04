@@ -42,13 +42,35 @@ geo.aerd.wk=readRDS(file.path(objdir,"NSDgeoaer.rds",fsep=.Platform$file.sep))
 geo.trapd.wk=readRDS(file.path(objdir,"NSDgeotrap.rds",fsep=.Platform$file.sep))
 geo.toxd.wk=readRDS(file.path(objdir,"NSDgeotox.rds",fsep=.Platform$file.sep))
 
+#change colnames/trt naming
+colnames(geo.aerd.wk)[c(2,3)]<-c("trt_ctrl","period")
+colnames(geo.trapd.wk)[c(2,3)]<-c("trt_ctrl","period")
+colnames(geo.toxd.wk)[c(2,3)]<-c("trt_ctrl","period")
+
+geo.aerd.wk$trt_ctrl<-as.character(geo.aerd.wk$trt_ctrl)
+geo.trapd.wk$trt_ctrl<-as.character(geo.trapd.wk$trt_ctrl)
+geo.toxd.wk$trt_ctrl<-as.character(geo.toxd.wk$trt_ctrl)
+
+geo.aerd.wk$trt_ctrl[geo.aerd.wk$trt_ctrl!="ctrl"]<-"trt"
+geo.trapd.wk$trt_ctrl[geo.trapd.wk$trt_ctrl!="ctrl"]<-"trt"
+geo.toxd.wk$trt_ctrl[geo.toxd.wk$trt_ctrl!="ctrl"]<-"trt"
+
+geo.aerd.wk$trt_ctrl<-as.factor(geo.aerd.wk$trt_ctrl)
+geo.trapd.wk$trt_ctrl<-as.factor(geo.trapd.wk$trt_ctrl)
+geo.toxd.wk$trt_ctrl<-as.factor(geo.toxd.wk$trt_ctrl)
+
+geo.aerd.wk$trt_ctrl<-forcats::fct_relevel(geo.aerd.wk$trt_ctrl,c("ctrl","trt"))
+geo.trapd.wk$trt_ctrl<-forcats::fct_relevel(geo.trapd.wk$trt_ctrl,c("ctrl","trt"))
+geo.toxd.wk$trt_ctrl<-forcats::fct_relevel(geo.toxd.wk$trt_ctrl,"ctrl","trt")
+
+
 # Check for spatial autocorrelation --------------------------------------------
 
 #Within each week, across pigs, do we see spatial autocorrelation of displacement values?
 
 # * Aerial spatial autocorr ----------------------------------------------------
 
-res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.aerd.wk,family=Gamma(link=log))
+res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + trt_ctrl*period, data=geo.aerd.wk,family=Gamma(link=log))
 
 #Test for spatial autocorrelation with dharma package
 res <- simulateResiduals(res1.ac.sac)
@@ -57,7 +79,7 @@ res2 = recalculateResiduals(res, group = as.factor(geo.aerd.wk$animalid), rotati
 testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
 #No spatial autocorrelation, p=0.3733
 
-res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc*sex, data=geo.aerd.wk,family=Gamma(link=log))
+res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + trt_ctrl*period*sex, data=geo.aerd.wk,family=Gamma(link=log))
 
 #Test for spatial autocorrelation with dharma package
 res <- simulateResiduals(res1.ac.sac)
@@ -69,7 +91,7 @@ testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
 # * Trap spatial autocorr ----------------------------------------------------
 
 #Run model
-res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.trapd.wk,family=Gamma(link=log))
+res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + trt_ctrl*period, data=geo.trapd.wk,family=Gamma(link=log))
 
 #Test for spatial autocorrelation with dharma package
 res <- simulateResiduals(res1.ac.sac) #mle-mvn?
@@ -87,7 +109,7 @@ geo.trapd.wk$X=round(geo.trapd.wk$mX/1000)
 geo.trapd.wk$Y=round(geo.trapd.wk$mY/1000)
 geo.trapd.wk$animalid<-factor(geo.trapd.wk$animalid)
 geo.trapd.wk$pos <- numFactor(geo.trapd.wk$X, geo.trapd.wk$Y)
-res.spat=glmmTMB(mNSD~Removal.Type*removal.period.akdecalc+
+res.spat=glmmTMB(mNSD~trt_ctrl*period+
                    exp(pos + 0 | animalid)+ar1(as.factor(week) + 0 | animalid),
                  data=geo.trapd.wk,
                  family=Gamma(link="log"),
@@ -102,7 +124,7 @@ testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
 
 #Test trap model with sex interaction for spat autocorr
 #Run model
-res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc*sex, data=geo.trapd.wk,family=Gamma(link=log))
+res1.ac.sac=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + trt_ctrl*period*sex, data=geo.trapd.wk,family=Gamma(link=log))
 
 #Test for spatial autocorrelation with dharma package
 res <- simulateResiduals(res1.ac.sac)
@@ -115,7 +137,7 @@ geo.trapd.wk$X=round(geo.trapd.wk$mX/1000)
 geo.trapd.wk$Y=round(geo.trapd.wk$mY/1000)
 geo.trapd.wk$animalid<-factor(geo.trapd.wk$animalid)
 geo.trapd.wk$pos <- numFactor(geo.trapd.wk$Y, geo.trapd.wk$Y)
-res.spat=glmmTMB(mNSD~Removal.Type*removal.period.akdecalc*sex+
+res.spat=glmmTMB(mNSD~trt_ctrl*period*sex+
                    exp(pos + 0 | animalid)+ar1(as.factor(week) + 0 | animalid),
                  data=geo.trapd.wk,
                  family=Gamma(link="log"),
@@ -131,7 +153,7 @@ testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
 # * Tox spatial autocorr ----------------------------------------------------
 
 #Run model
-res1.ac.sac=glmmTMB(mNSD ~ Removal.Type*removal.period.akdecalc, data=geo.toxd.wk,family=Gamma(link=log))
+res1.ac.sac=glmmTMB(mNSD ~ trt_ctrl*period, data=geo.toxd.wk,family=Gamma(link=log))
 
 #Test for spatial autocorrelation with dharma package
 res <- simulateResiduals(res1.ac.sac)
@@ -141,7 +163,7 @@ testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
 #no spatial autocorrelation, p=0.3964
 
 #Run model with sex interaction
-res1.ac.sac=glmmTMB(mNSD ~ Removal.Type*removal.period.akdecalc*sex, data=geo.toxd.wk,family=Gamma(link=log))
+res1.ac.sac=glmmTMB(mNSD ~ trt_ctrl*period*sex, data=geo.toxd.wk,family=Gamma(link=log))
 
 #Test for spatial autocorrelation with dharma package
 res <- simulateResiduals(res1.ac.sac)
@@ -154,7 +176,7 @@ geo.toxd.wk$X=round(geo.toxd.wk$mX/1000)
 geo.toxd.wk$Y=round(geo.toxd.wk$mY/1000)
 geo.toxd.wk$animalid<-factor(geo.toxd.wk$animalid)
 geo.toxd.wk$pos <- numFactor(geo.toxd.wk$X, geo.toxd.wk$Y)
-res.spat=glmmTMB(mNSD~Removal.Type*removal.period.akdecalc*sex+
+res.spat=glmmTMB(mNSD~trt_ctrl*period*sex+
                    exp(pos + 0 | animalid),
                  data=geo.toxd.wk,
                  family=Gamma(link="log"),
@@ -191,10 +213,10 @@ testSpatialAutocorrelation(res2,groupLocations$mX, groupLocations$mY)
 
 # * Aerial GLMMs --------------------------------------------------------------------
 geo.wkdf=geo.aerd.wk
-geo.wkdf$removal.period.akdecalc<-forcats::fct_relevel(geo.wkdf$removal.period.akdecalc,c("before","after"))
+geo.wkdf$period<-forcats::fct_relevel(geo.wkdf$period,c("before","after"))
 #geo.wkdf$sex<-forcats::fct_relevel(geo.wkdf$sex,c("Female","Male"))
-res.rp_aer=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + Removal.Type*removal.period.akdecalc, data=geo.wkdf,family=Gamma(link=log))
-res.rps_aer=glmmTMB(mNSD ~ (1|animalid/week) + Removal.Type*removal.period.akdecalc*sex, data=geo.wkdf,family=Gamma(link=log))
+res.rp_aer=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + trt_ctrl*period, data=geo.wkdf,family=Gamma(link=log))
+res.rps_aer=glmmTMB(mNSD ~ (1|animalid/week) + trt_ctrl*period*sex, data=geo.wkdf,family=Gamma(link=log))
 
 #aerial rps model with temporal autocorrelation wouldn't converge
 
@@ -207,14 +229,14 @@ geo.wkdf$Y=round(geo.wkdf$mY/1000)
 geo.wkdf$animalid<-factor(geo.wkdf$animalid)
 geo.wkdf$pos1 <- numFactor(geo.wkdf$X, geo.wkdf$Y)
 geo.wkdf$pos2 <- numFactor(geo.wkdf$Y, geo.wkdf$Y)
-geo.wkdf$Removal.Type<-forcats::fct_relevel(geo.wkdf$Removal.Type,c("ctrl","trap"))
-geo.wkdf$removal.period.akdecalc<-forcats::fct_relevel(geo.wkdf$removal.period.akdecalc,c("before","during","after"))
+geo.wkdf$trt_ctrl<-forcats::fct_relevel(geo.wkdf$trt_ctrl,c("ctrl","trap"))
+geo.wkdf$period<-forcats::fct_relevel(geo.wkdf$period,c("before","during","after"))
 #geo.wkdf$sex<-forcats::fct_relevel(geo.wkdf$sex,c("Female","Male"))
-res.rp_trap=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + exp(pos1 + 0 | animalid) + Removal.Type*removal.period.akdecalc, 
+res.rp_trap=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + exp(pos1 + 0 | animalid) + trt_ctrl*period, 
                     data=geo.wkdf,
                     family=Gamma(link=log),
                     verbose=TRUE)
-res.rps_trap=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + exp(pos2 + 0 | animalid) + Removal.Type*removal.period.akdecalc*sex, 
+res.rps_trap=glmmTMB(mNSD ~ ar1(as.factor(week) + 0 | animalid) + exp(pos2 + 0 | animalid) + trt_ctrl*period*sex, 
                      data=geo.wkdf,
                      family=Gamma(link=log),
                      verbose=TRUE)
@@ -226,11 +248,11 @@ geo.wkdf$Y=round(geo.wkdf$mY/1000)
 geo.wkdf$animalid<-factor(geo.wkdf$animalid)
 geo.wkdf$pos <- numFactor(geo.wkdf$X, geo.wkdf$Y)
 #geo.wkdf$sex<-forcats::fct_relevel(geo.wkdf$sex,c("Female","Male"))
-res.rp_tox=glmmTMB(mNSD ~ Removal.Type*removal.period.akdecalc, 
+res.rp_tox=glmmTMB(mNSD ~ trt_ctrl*period, 
                    data=geo.wkdf,
                    family=Gamma(link=log),
                    verbose=TRUE)
-res.rps_tox=glmmTMB(mNSD ~ exp(pos + 0 | animalid) + Removal.Type*removal.period.akdecalc*sex, 
+res.rps_tox=glmmTMB(mNSD ~ exp(pos + 0 | animalid) + trt_ctrl*period*sex, 
                     data=geo.wkdf,
                     family=Gamma(link=log),
                     verbose=TRUE)
@@ -251,14 +273,46 @@ models=c("res.rp_aer",
             "res.rp_tox",
             "res.rps_tox")
 
+# * Make gt summary table----------------------
+library(gt)
+library(gtsummary)
+
+aer_tbl <- tbl_regression(res.rp_aer, exponentiate = TRUE)
+trap_tbl <- tbl_regression(res.rp_trap, exponentiate = TRUE)
+tox_tbl <- tbl_regression(res.rp_tox, exponentiate = TRUE)
+
+nsd_tbl=tbl_merge(
+  tbls = list(aer_tbl, 
+              trap_tbl,
+              tox_tbl),
+  tab_spanner = c("aerial","trap","tox")
+) 
+
+saveRDS(nsd_tbl,file.path(outdir,"Model_Output","nsd_parm_gt.rds",fsep=.Platform$file.sep))
+
+
+aer_tbl_s <- tbl_regression(res.rps_aer, exponentiate = TRUE)
+trap_tbl_s <- tbl_regression(res.rps_trap, exponentiate = TRUE)
+tox_tbl_s <- tbl_regression(res.rps_tox, exponentiate = TRUE)
+
+nsd_tbl_s=tbl_merge(
+  tbls = list(aer_tbl_s, 
+              trap_tbl_s,
+              tox_tbl_s),
+  tab_spanner = c("aerial","trap","tox")
+) 
+
+saveRDS(nsd_tbl_s,file.path(outdir,"Model_Output","nsd_parm_gt_s.rds",fsep=.Platform$file.sep))
+
+
 # * Format model prediction df -----------
 for(i in 1:length(mods)){
   #i=1
   if(length(grep("rps",models[i]))==0){
-    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","removal.period.akdecalc")))
+    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","period")))
     tmp$facet=NA
   } else{
-    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","removal.period.akdecalc","sex")))
+    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","period","sex")))
   }
   tmp$model=models[i]
   
@@ -295,7 +349,7 @@ for(i in 1:length(mods)){
   if(nrow(coefs2)!=0){
     
     if(nrow(coefs2)>1){
-      coefs2=as.data.frame(coefs2[grep("Removal.Type",rownames(coefs2)),,drop=FALSE])
+      coefs2=as.data.frame(coefs2[grep("trt_ctrl",rownames(coefs2)),,drop=FALSE])
       coefs2=as.data.frame(coefs2[grep("period",rownames(coefs2)),,drop=FALSE])
     }
     
