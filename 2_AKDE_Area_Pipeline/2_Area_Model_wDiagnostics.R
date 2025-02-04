@@ -38,6 +38,11 @@ akaer=readRDS(file.path(objdir,"outdf_akde_aer_corrected_f.rds",fsep=.Platform$f
 aktrap=readRDS(file.path(objdir,"outdf_akde_trap_corrected_f.rds",fsep=.Platform$file.sep))
 aktox=readRDS(file.path(objdir,"outdf_akde_aktox_corrected_f.rds",fsep=.Platform$file.sep))
 
+colnames(akaer)[19]<-"trt_ctrl"
+colnames(aktrap)[19]<-"trt_ctrl"
+colnames(aktox)[19]<-"trt_ctrl"
+
+
 #source needed functions
 funcdir<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/2_Scripts/Functions"
 func.list=list.files(funcdir,full.names=TRUE)
@@ -70,10 +75,19 @@ akaer$period<-forcats::fct_relevel(akaer$period,c("before","after"))
 aktrap$period<-forcats::fct_relevel(aktrap$period,c("before","during","after"))
 aktox$period<-forcats::fct_relevel(aktox$period,c("before","after"))
 
+#change levels in trt_ctrl
+akaer$trt_ctrl<-as.character(akaer$trt_ctrl)
+aktrap$trt_ctrl<-as.character(aktrap$trt_ctrl)
+aktox$trt_ctrl<-as.character(aktox$trt_ctrl)
+
+akaer$trt_ctrl[akaer$trt_ctrl!="ctrl"]<-"trt"
+aktrap$trt_ctrl[aktrap$trt_ctrl!="ctrl"]<-"trt"
+aktox$trt_ctrl[aktox$trt_ctrl!="ctrl"]<-"trt"
+
 #Relevel removal types
-akaer$Removal.Type<-forcats::fct_relevel(akaer$Removal.Type,c("ctrl","aer"))
-aktrap$Removal.Type<-forcats::fct_relevel(aktrap$Removal.Type,c("ctrl","trap"))
-aktox$Removal.Type<-forcats::fct_relevel(aktox$Removal.Type,c("ctrl","tox"))
+akaer$trt_ctrl<-forcats::fct_relevel(akaer$trt_ctrl,c("ctrl","trt"))
+aktrap$trt_ctrl<-forcats::fct_relevel(aktrap$trt_ctrl,c("ctrl","trt"))
+aktox$trt_ctrl<-forcats::fct_relevel(aktox$trt_ctrl,c("ctrl","trt"))
 
 #Relevel sex, check male significance level for results figure
 #akaer$sex<-forcats::fct_relevel(akaer$sex,c("Male","Female"))
@@ -82,7 +96,7 @@ aktox$Removal.Type<-forcats::fct_relevel(aktox$Removal.Type,c("ctrl","tox"))
 
 # Check aerial data spatial autocorrelation -----------------------------------
 {
-res=glmmTMB(area.est~(1|animalid)+Removal.Type*period,data=akaer,family=Gamma(link="log"))
+res=glmmTMB(area.est~(1|animalid)+trt_ctrl*period,data=akaer,family=Gamma(link="log"))
 ress <- simulateResiduals(res)
 groupLocations = aggregate(akaer[, 6:7], list(akaer$animalid), mean)
 ress2 = recalculateResiduals(ress, group = akaer$animalid)
@@ -102,7 +116,7 @@ so2=recalculateResiduals(simulationOutput, group = akaer$animalid)
 #hist(aktrap$area.est)
 #descdist(aktrap$area.est)
 #Gamma seems like best option
-res=glmmTMB(area.est~(1|animalid)+Removal.Type*period,data=aktrap,family=Gamma(link="log"))
+res=glmmTMB(area.est~(1|animalid)+trt_ctrl*period,data=aktrap,family=Gamma(link="log"))
 ress <- simulateResiduals(res)
 groupLocations = aggregate(aktrap[, 6:7], list(aktrap$animalid), mean)
 ress2 = recalculateResiduals(ress, group = aktrap$animalid, rotation="estimated")
@@ -111,7 +125,7 @@ ress2 = recalculateResiduals(ress, group = aktrap$animalid, rotation="estimated"
 
 #Correct for spatial autocorrelation, try gaussian autocor structure
 aktrap$pos <- numFactor(aktrap$ctr.x, aktrap$ctr.y)
-res.sa=glmmTMB(area.est~Removal.Type*period+exp(pos + 0 | animalid),data=aktrap,family=Gamma(link="log"))
+res.sa=glmmTMB(area.est~trt_ctrl*period+exp(pos + 0 | animalid),data=aktrap,family=Gamma(link="log"))
 #*Note, gaussian autocor structure wouldnt converge, going with exp
 #*Note, inclusion of animalid as random intercept AND as group in spatial autocorr structure also will not converge. Removing animalid random intercept.
 
@@ -129,7 +143,7 @@ so2=recalculateResiduals(simulationOutput, group = aktrap$animalid, rotation="es
 {
 #Correct for spatial autocorrelation, try gaussian autocor structure
 aktrap$pos <- numFactor(aktrap$ctr.x, aktrap$ctr.y)
-res.sa=glmmTMB(area.est~Removal.Type*period+exp(pos + 0 | animalid),data=aktrap,family=Gamma(link="log"))
+res.sa=glmmTMB(area.est~trt_ctrl*period+exp(pos + 0 | animalid),data=aktrap,family=Gamma(link="log"))
 #*Note, gaussian autocor structure wouldnt converge, going with exp
 #*Note, inclusion of animalid as random intercept AND as group in spatial autocorr structure also will not converge. Removing animalid random intercept.
 }
@@ -153,7 +167,7 @@ aktox$died.tox<-forcats::fct_relevel(aktox$died.tox, c("0","1"))
 aktox2=aktox[aktox$died.tox==0,]
 
 #Check for spatial autocorrelation
-res=glmmTMB(area.est~(1|animalid)+Removal.Type*period*died.tox,data=aktox,family=Gamma(link="log"))
+res=glmmTMB(area.est~(1|animalid)+trt_ctrl*period*died.tox,data=aktox,family=Gamma(link="log"))
 ress <- simulateResiduals(res)
 groupLocations = aggregate(aktox[, 6:7], list(aktox$animalid), mean)
 ress2 = recalculateResiduals(ress, group = aktox$animalid, rotation="estimated")
@@ -164,16 +178,16 @@ ress2 = recalculateResiduals(ress, group = aktox$animalid, rotation="estimated")
 # Run GLMMs ------------------------------------------------------------
 
 # Aerial
-res.rp_aer=glmmTMB(area.est ~ Removal.Type*period + (1|animalid), data=akaer,family=Gamma(link=log))
-res.rps_aer=glmmTMB(area.est ~ Removal.Type*period*sex + (1|animalid), data=akaer,family=Gamma(link=log))
+res.rp_aer=glmmTMB(area.est ~ trt_ctrl*period + (1|animalid), data=akaer,family=Gamma(link=log))
+res.rps_aer=glmmTMB(area.est ~ trt_ctrl*period*sex + (1|animalid), data=akaer,family=Gamma(link=log))
 
 # Trap
-res.rp_trap=glmmTMB(area.est ~ Removal.Type*period + exp(pos + 0 | animalid), data=aktrap,family=Gamma(link=log))
-#Note, model with removal.type*period+sex would not converge, so excluding from model list
+res.rp_trap=glmmTMB(area.est ~ trt_ctrl*period + exp(pos + 0 | animalid), data=aktrap,family=Gamma(link=log))
+#Note, model with trt_ctrl*period+sex would not converge, so excluding from model list
 
 # Tox
-res.rp_tox=glmmTMB(area.est ~ Removal.Type*period + (1|animalid), data=aktox,family=Gamma(link=log))
-res.rps_tox=glmmTMB(area.est ~ Removal.Type*period*sex + (1|animalid), data=aktox,family=Gamma(link=log))
+res.rp_tox=glmmTMB(area.est ~ trt_ctrl*period + (1|animalid), data=aktox,family=Gamma(link=log))
+res.rps_tox=glmmTMB(area.est ~ trt_ctrl*period*sex + (1|animalid), data=aktox,family=Gamma(link=log))
 
 
 # Format model info -----------------------------------------------------------
@@ -189,14 +203,44 @@ models=c("res.rp_aer",
          "res.rp_tox",
          "res.rps_tox")
 
+# * try gt summary -----------
+library(gt)
+library(gtsummary)
+
+aer_tbl <- tbl_regression(res.rp_aer, exponentiate = TRUE)
+trap_tbl <- tbl_regression(res.rp_trap, exponentiate = TRUE)
+tox_tbl <- tbl_regression(res.rp_tox, exponentiate = TRUE)
+
+area_tbl=tbl_merge(
+  tbls = list(aer_tbl, 
+              trap_tbl,
+              tox_tbl),
+  tab_spanner = c("aerial","trap","tox")
+) 
+
+saveRDS(area_tbl,file.path(outdir,"Model_Output","area_parm_gt.rds",fsep=.Platform$file.sep))
+
+#save indiv response tables, stack with others in makeresultsfigures.r
+
+#area_tbl=tbl_merge(
+#  tbls = list(area_tbl, 
+#              area_tbl),
+#  tab_spanner = c("area","area1")
+#)
+
+#stk=tbl_stack(tbls=list(area_tbl,area_tbl),group_header=c("area","area2"))
+#stk2=stk |> as_gt() |>
+#  opt_stylize(style = 5, color = "gray") |>
+#  opt_all_caps() 
+
 # * Format model prediction df -----------
 for(i in 1:length(mods)){
   #i=1
   if(length(grep("rps",models[i]))==0){
-    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","period")))
+    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","period")))
     tmp$facet=NA
   } else{
-    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","period","sex")))
+    tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","period","sex")))
   }
   tmp$model=models[i]
   
@@ -233,7 +277,7 @@ for(i in 1:length(mods)){
   if(nrow(coefs2)!=0){
     
     if(nrow(coefs2)>1){
-      coefs2=as.data.frame(coefs2[grep("Removal.Type",rownames(coefs2)),,drop=FALSE])
+      coefs2=as.data.frame(coefs2[grep("trt_ctrl",rownames(coefs2)),,drop=FALSE])
       coefs2=as.data.frame(coefs2[grep("period",rownames(coefs2)),,drop=FALSE])
     }
     
@@ -303,6 +347,7 @@ for(i in 1:length(mods)){
   }
   
   df$model=models[i]
+  #df$response="area"
   
   if(i==1){
     parms=df
