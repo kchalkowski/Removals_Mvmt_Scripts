@@ -60,6 +60,79 @@ preds=rbind(mods[[grep("preds",mod.names)[1]]],
 #relevel periods
 preds$per<-forcats::fct_relevel(preds$per,c("before","during","after"))
 
+#Pull in gt objects ----------
+
+area_tbl=readRDS(file.path(outdir,"Model_Output","area_parm_gt.rds",fsep=.Platform$file.sep))
+nsd_tbl=readRDS(file.path(outdir,"Model_Output","nsd_parm_gt_s.rds",fsep=.Platform$file.sep))
+
+stk=tbl_stack(tbls=list(area_tbl,nsd_tbl),
+              group_header=c("Area (km2)","NSD (m2)"))
+stk2=stk |> as_gt() |>
+  opt_stylize(style = 5, color = "gray") |>
+  opt_all_caps() 
+
+# Format params table ------------------------------------------------------------
+
+#add detail for response
+params[grep("distance",params$model),]$response<-"distance"
+params[grep("speed",params$model),]$response<-"speed"
+params[grep("nind",params$model),]$response<-"nind"
+params[grep("ncon",params$model),]$response<-"ncon"
+
+#add column for sex/whole model
+params$sm="whole"
+params[grep("rps",params$model),]$sm<-"sex"
+
+#add removal column
+params$rem=NA
+params[grep("trap",params$model),]$rem="trap"
+params[grep("aer",params$model),]$rem="aer"
+params[grep("tox",params$model),]$rem="tox"
+
+#add asterisk significance column
+params$sig=""
+params[params$p.value<0.05,]$sig="*"
+params[params$p.value<0.01,]$sig="**"
+params[params$p.value<0.001,]$sig="***"
+
+#reorder columns
+params=params[,c(7,9,8,1:5,10)]
+
+#format digits
+params$estimate=round(params$estimate, digits=2)
+params$std.error=round(params$std.error, digits=2)
+params$statistic=round(params$statistic, digits=2)
+params$p.value=formatC(params$p.value, format = "e",digits=2)
+
+#View(params)
+
+#standardize names of terms
+#params$term[grep("removal.period.akdecalc",params$term)]
+params$term=gsub("removal.period.akdecalc","",params$term)
+params$term=gsub("Removal.Type","",params$term)
+params$term=gsub("period","",params$term)
+params$term=gsub("sex","",params$term)
+params$term=gsub("trt_ctrl","",params$term)
+params$term=gsub("aer","trt",params$term)
+params$term=gsub("tox","trt",params$term)
+params$term=gsub("trap","trt",params$term)
+
+#trimming ncon/nind for now
+parmv=params[params$response!="ncon"&params$response!="nind",]
+
+#install.packages("formattable")
+#library(formattable)
+#formattable(parmv)
+
+parmv=parmv[with(parmv, order(response, rem, sm,term)),]
+#formattable(parmv)
+
+parmv_s=parmv[parmv$sm=="sex",]
+parmv_w=parmv[parmv$sm=="whole",]
+
+write.csv(parmv_s,paste0(outdir,"/Parameter_Table/mv_parameter_sex.csv"))
+write.csv(parmv_w,paste0(outdir,"/Parameter_Table/mv_parameter_whole.csv"))
+
 # Format pred diffs ------------------------------------------------------------
 
 #Overall (sex is NA)
@@ -626,7 +699,14 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   ggsave("~/Downloads/allcontact_sex.png",allp_c,width=9,height=3.25,units="in")
   
 
+  
+# Make function to do heatmap -----------------
+  
+  
 # Make coded pdiffs table -----------------
+  
+  
+  
   
   
   #calc treatment mag diffs
@@ -718,15 +798,34 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   #join to get magnitude diffs
   pdj=left_join(pdf,ptbl1,by="key")
   
+  pdj$mag<-abs(pdj$mag)
+  #change magnitude sign to be related to direction of effect, movement
+  pdj[pdj$pred<0,]$mag=pdj[pdj$pred<0,]$mag*(-1)
+  
+  pdj$response[pdj$response=="distance"]<-"distance (km)"
+  pdj$response[pdj$response=="speed"]<-"speed (km/hr)"
+  pdj$response[pdj$response=="area"]<-"area (km^2)"
+  pdj$response[pdj$response=="nsd"]<-"nsd (m^2)"
+  
   
   #View(pdj)
-  pdj$scale=NA
-  pdj$scale[pdj$mag<(1)]<-"Reversal, small diff"
-  pdj$scale[pdj$mag<(-2)]<-"Reversal, moderate diff"
-  pdj$scale[pdj$mag<(-20)]<-"Reversal, strong diff"
-  pdj$scale[pdj$mag>(1)]<-"Same, small diff"
-  pdj$scale[pdj$mag>(2)]<-"Same, moderate diff"
-  pdj$scale[pdj$mag>(3)]<-"Same, strong diff"
+  #pdj$scale=NA
+  #pdj$scale[pdj$mag<(1)]<-"Reversal, small diff"
+  #pdj$scale[pdj$mag<(-2)]<-"Reversal, moderate diff"
+  #pdj$scale[pdj$mag<(-20)]<-"Reversal, strong diff"
+  #pdj$scale[pdj$mag>(1)]<-"Same, small diff"
+  #pdj$scale[pdj$mag>(2)]<-"Same, moderate diff"
+  #pdj$scale[pdj$mag>(3)]<-"Same, strong diff"
+  
+  #pdj$scale<-as.factor(pdj$scale)
+  #levels(pdj$scale)
+  #pdj$scale=forcats::fct_expand(pdj$scale,"Same, small diff","Same, moderate diff")
+  #pdj$scale=forcats::fct_relevel(pdj$scale,c("Same, strong diff",
+                                            # "Same, moderate diff",
+                                            # "Same, small diff",
+                                            # "Reversal, small diff",
+                                            # "Reversal, moderate diff",
+                                            # "Reversal, strong diff"))
   
   pdjmv=pdj[pdj$response!="nind"&pdj$response!="ncon",]
   
@@ -737,24 +836,37 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   
   pdjmv_w=pdjmv[pdjmv$sex=="whole",]
   pdjmv_f=pdjmv[pdjmv$sex=="female",]
+  pdjmv_m=pdjmv[pdjmv$sex=="male",]
   
   #library(colorspace)
   
   #heatmap_plot <- 
     #pdjmv_w %>% filter(rem=="aer") %>%
-    ggplot(pdj,aes(x = period, y = response, fill = scale, label = formatC(pred, format = "e",digits=2))) +
+    ggplot(pdjmv_m,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
     geom_tile(color = "white",show.legend=TRUE) + # Create heatmap
     geom_text(color = "black", size = 4) + # Add text labels
     #scale_fill_gradient(low = "lightblue", high = "darkblue") + # Set color gradient
-    #scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-6,6),h1=6,c1=10,c2=10,c3=10) + 
-    scale_fill_discrete()+
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-6,6),h1=6,c1=10,c2=10,c3=10) + 
+    #scale_fill_discrete(drop=FALSE)+
+     # scale_fill_manual(values = 
+    #                      c("Same, strong diff" = "#1497f5", 
+    #                        "Same, moderate diff" = "#51b0f5",
+    #                        "Same, small diff" = "#a5d1f0", 
+    #                        "Reversal, small diff" = "#f5abb0",
+    #                        "Reversal, moderate diff" = "#f2636b", 
+    #                        "Reversal, strong diff" = "#ff212c"), 
+    #                    drop = FALSE)+
     theme_minimal() + # Set theme
-    labs(x = "Removal Period", y = "Movement Response") + # Labels
+    labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
     theme(axis.text.x = element_text(angle = 45, hjust = 1))+
     facet_wrap(~rem)
   
-  ?scale_fill_discrete
-  heatmap_plot
+    
+     
+      
+    
+  #?scale_fill_discrete
+  #heatmap_plot
   #formatC(pdjmv_w$pred, format = "e",digits=2)
 # Make powerpoint figures -----------------
   #same as above, just formatted with diff text sizes and grouped to fit ppt slide
