@@ -60,78 +60,86 @@ preds=rbind(mods[[grep("preds",mod.names)[1]]],
 #relevel periods
 preds$per<-forcats::fct_relevel(preds$per,c("before","during","after"))
 
-#Pull in gt objects ----------
+# Pull in gt objects -----------------------------------------------------------
+
+## Parameter table for removal*period models -----------------------------------
 
 area_tbl=readRDS(file.path(outdir,"Model_Output","area_parm_gt.rds",fsep=.Platform$file.sep))
-nsd_tbl=readRDS(file.path(outdir,"Model_Output","nsd_parm_gt_s.rds",fsep=.Platform$file.sep))
+nsd_tbl=readRDS(file.path(outdir,"Model_Output","nsd_parm_gt.rds",fsep=.Platform$file.sep))
+dist_tbl=readRDS(file.path(outdir,"Model_Output","dist_parm_gt.rds",fsep=.Platform$file.sep))
+speed_tbl=readRDS(file.path(outdir,"Model_Output","speed_parm_gt.rds",fsep=.Platform$file.sep))
+ncon_tbl=readRDS(file.path(outdir,"Model_Output","ncon_parm_gt.rds",fsep=.Platform$file.sep))
+nind_tbl=readRDS(file.path(outdir,"Model_Output","nind_parm_gt.rds",fsep=.Platform$file.sep))
 
-stk=tbl_stack(tbls=list(area_tbl,nsd_tbl),
-              group_header=c("Area (km2)","NSD (m2)"))
+stk=tbl_stack(tbls=list(area_tbl,nsd_tbl,dist_tbl,speed_tbl),
+              group_header=c("Area (km2)","NSD (m2)","distance (km)","speed (km/hr)"))
+
+as_gt(stk) %>%             # convert gtsummary table to gt
+  gt::tab_style(           # use gt::tab_style() to shade column
+    style = list(gt::cell_fill(color = "white")),
+    locations = gt::cells_body(columns = c(estimate_1,ci_1,p.value_1))
+  ) %>%
+  gt::tab_style(           # use gt::tab_style() to shade column
+    style = list(gt::cell_fill(color = "white")),
+    locations = gt::cells_body(columns = c(estimate_2,ci_2,p.value_2))
+  ) %>%
+  gt::tab_style(           # use gt::tab_style() to shade column
+    style = list(gt::cell_fill(color = "white")),
+    locations = gt::cells_body(columns = c(estimate_3,ci_3,p.value_3))
+  ) %>%
+  gt::tab_style(
+    style=cell_text(size=11),
+    locations=gt::cells_body(columns=c(estimate_1,ci_1,p.value_1,
+                                       estimate_2,ci_2,p.value_2,
+                                       estimate_3,ci_3,p.value_3),
+                             rows=everything())
+  ) %>%
+  gt::tab_style(
+    style=list(cell_text(size=11,weight="bold",color="black"),
+               cell_fill(color="white"),
+               cell_borders(sides="bottom",weight=px(3))),
+    locations=gt::cells_row_groups()
+  ) %>%
+  gt::tab_style(
+    style=list(cell_text(size=11,weight="bold",color="black"),
+               cell_fill(color="white"),
+               cell_borders(sides="bottom",weight=px(3),color="white")),
+    locations=list(gt::cells_column_labels(),gt::cells_column_spanners())
+  ) %>%
+  gt::tab_style(
+    style=list(cell_text(size=11,weight="bold"),
+               cell_borders(sides="bottom",weight=px(1))),
+    locations=list(gt::cells_body(columns=label,rows=c(1,4,8,11,14,18,21,24,28,31,34,38)))
+  ) %>% gt::tab_style(
+    style=list(cell_borders(sides="bottom",weight=px(1))),
+    locations=list(gt::cells_body(columns=everything(),rows=c(1,4,8,11,14,18,21,24,28,31,34,38)))
+  ) %>%
+  gt::tab_style(
+    style=list(cell_text(size=11)),
+    locations=list(gt::cells_body(columns=label,rows=c(2:3,5:7,9,10,12,13,15:17,19,20,22,23,25:27,29,30,32,33,35,36,37,39,40)))
+  ) %>%
+  tab_options(data_row.padding = px(1))
+
+
+#stk2 |> gtsave("~/Downloads/tab_1.docx")
+
+## Parameter table for removal*period*sex models -----------------------------------
+#need change order of all tables to aer, tox, trap
+area_tbl_s=readRDS(file.path(outdir,"Model_Output","area_parm_gt_s.rds",fsep=.Platform$file.sep))
+nsd_tbl_s=readRDS(file.path(outdir,"Model_Output","nsd_parm_gt_s.rds",fsep=.Platform$file.sep))
+dist_tbl_s=readRDS(file.path(outdir,"Model_Output","dist_parm_gt_s.rds",fsep=.Platform$file.sep))
+speed_tbl_s=readRDS(file.path(outdir,"Model_Output","speed_parm_gt_s.rds",fsep=.Platform$file.sep))
+ncon_tbl_s=readRDS(file.path(outdir,"Model_Output","ncon_parm_gt_s.rds",fsep=.Platform$file.sep))
+nind_tbl_s=readRDS(file.path(outdir,"Model_Output","nind_parm_gt_s.rds",fsep=.Platform$file.sep))
+
+stk=tbl_stack(tbls=list(nsd_tbl_s,area_tbl_s,dist_tbl_s,speed_tbl_s),
+              group_header=c("NSD (m2)","Area (km2)","distance (km)","speed (km/hr)"))
 stk2=stk |> as_gt() |>
   opt_stylize(style = 5, color = "gray") |>
   opt_all_caps() 
 
-# Format params table ------------------------------------------------------------
+stk2 |> gtsave("~/Downloads/tab_1.docx")
 
-#add detail for response
-params[grep("distance",params$model),]$response<-"distance"
-params[grep("speed",params$model),]$response<-"speed"
-params[grep("nind",params$model),]$response<-"nind"
-params[grep("ncon",params$model),]$response<-"ncon"
-
-#add column for sex/whole model
-params$sm="whole"
-params[grep("rps",params$model),]$sm<-"sex"
-
-#add removal column
-params$rem=NA
-params[grep("trap",params$model),]$rem="trap"
-params[grep("aer",params$model),]$rem="aer"
-params[grep("tox",params$model),]$rem="tox"
-
-#add asterisk significance column
-params$sig=""
-params[params$p.value<0.05,]$sig="*"
-params[params$p.value<0.01,]$sig="**"
-params[params$p.value<0.001,]$sig="***"
-
-#reorder columns
-params=params[,c(7,9,8,1:5,10)]
-
-#format digits
-params$estimate=round(params$estimate, digits=2)
-params$std.error=round(params$std.error, digits=2)
-params$statistic=round(params$statistic, digits=2)
-params$p.value=formatC(params$p.value, format = "e",digits=2)
-
-#View(params)
-
-#standardize names of terms
-#params$term[grep("removal.period.akdecalc",params$term)]
-params$term=gsub("removal.period.akdecalc","",params$term)
-params$term=gsub("Removal.Type","",params$term)
-params$term=gsub("period","",params$term)
-params$term=gsub("sex","",params$term)
-params$term=gsub("trt_ctrl","",params$term)
-params$term=gsub("aer","trt",params$term)
-params$term=gsub("tox","trt",params$term)
-params$term=gsub("trap","trt",params$term)
-
-#trimming ncon/nind for now
-parmv=params[params$response!="ncon"&params$response!="nind",]
-
-#install.packages("formattable")
-#library(formattable)
-#formattable(parmv)
-
-parmv=parmv[with(parmv, order(response, rem, sm,term)),]
-#formattable(parmv)
-
-parmv_s=parmv[parmv$sm=="sex",]
-parmv_w=parmv[parmv$sm=="whole",]
-
-write.csv(parmv_s,paste0(outdir,"/Parameter_Table/mv_parameter_sex.csv"))
-write.csv(parmv_w,paste0(outdir,"/Parameter_Table/mv_parameter_whole.csv"))
 
 # Format pred diffs ------------------------------------------------------------
 
@@ -156,7 +164,6 @@ pdiffs2=tidyr::pivot_wider(pdiffs,id_cols=c(trt,sex,rem,response),values_from=pr
 pdiffs2$before_during=pdiffs2$during-pdiffs2$before
 pdiffs2$before_after=pdiffs2$after-pdiffs2$before
 
-head(pdiffs2)
 pdiffs2$trt<-as.character(pdiffs2$trt)
 pdiffs2$trt[pdiffs2$trt!="ctrl"]<-"trt"
 
