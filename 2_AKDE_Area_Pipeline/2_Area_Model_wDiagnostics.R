@@ -24,6 +24,8 @@ library(dplyr)
 library(hrbrthemes)
 library(sf)
 library(mapview)
+library(gt)
+library(gtsummary)
 
 #Set dirs
 input=file.path(home,"1_Data","Input",fsep=.Platform$file.sep)
@@ -203,9 +205,7 @@ models=c("res.rp_aer",
          "res.rp_tox",
          "res.rps_tox")
 
-# * Make gt summary table -----------
-library(gt)
-library(gtsummary)
+## Make gt summary table -----------
 
 aer_tbl <- tbl_regression(res.rp_aer, exponentiate = TRUE)
 trap_tbl <- tbl_regression(res.rp_trap, exponentiate = TRUE)
@@ -220,18 +220,17 @@ area_tbl=tbl_merge(
 
 saveRDS(area_tbl,file.path(outdir,"Model_Output","area_parm_gt.rds",fsep=.Platform$file.sep))
 
-#save indiv response tables, stack with others in makeresultsfigures.r
+aer_tbl_s <- tbl_regression(res.rps_aer, exponentiate = TRUE)
+#trap_tbl_s <- tbl_regression(res.rps_trap, exponentiate = TRUE)
+tox_tbl_s <- tbl_regression(res.rps_tox, exponentiate = TRUE)
 
-#area_tbl=tbl_merge(
-#  tbls = list(area_tbl, 
-#              area_tbl),
-#  tab_spanner = c("area","area1")
-#)
+area_tbl_s=tbl_merge(
+  tbls = list(aer_tbl_s,
+              tox_tbl_s),
+  tab_spanner = c("aerial","tox")
+) 
 
-#stk=tbl_stack(tbls=list(area_tbl,area_tbl),group_header=c("area","area2"))
-#stk2=stk |> as_gt() |>
-#  opt_stylize(style = 5, color = "gray") |>
-#  opt_all_caps() 
+saveRDS(area_tbl_s,file.path(outdir,"Model_Output","area_parm_gt_s.rds",fsep=.Platform$file.sep))
 
 # * Format model prediction df -----------
 for(i in 1:length(mods)){
