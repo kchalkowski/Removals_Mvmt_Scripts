@@ -36,6 +36,8 @@ library(hrbrthemes)
 library(glmmTMB)
 library(DHARMa)
 library(sdmTMB)
+library(gt)
+library(gtsummary)
 
 #Read in data to use for NSD analysis:
 geo.aerd.wk=readRDS(file.path(objdir,"NSDgeoaer.rds",fsep=.Platform$file.sep))
@@ -274,8 +276,6 @@ models=c("res.rp_aer",
             "res.rps_tox")
 
 # * Make gt summary table----------------------
-library(gt)
-library(gtsummary)
 
 aer_tbl <- tbl_regression(res.rp_aer, exponentiate = TRUE)
 trap_tbl <- tbl_regression(res.rp_trap, exponentiate = TRUE)
@@ -289,7 +289,6 @@ nsd_tbl=tbl_merge(
 ) 
 
 saveRDS(nsd_tbl,file.path(outdir,"Model_Output","nsd_parm_gt.rds",fsep=.Platform$file.sep))
-
 
 aer_tbl_s <- tbl_regression(res.rps_aer, exponentiate = TRUE)
 trap_tbl_s <- tbl_regression(res.rps_trap, exponentiate = TRUE)
