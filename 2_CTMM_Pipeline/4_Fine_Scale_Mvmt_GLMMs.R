@@ -1123,7 +1123,7 @@ dist_tbl=tbl_merge(
   tbls = list(aer_tbl,
               tox_tbl, 
               trap_tbl),
-  tab_spanner = c("aerial","trap","tox")
+  tab_spanner = c("aerial","tox","trap")
 ) 
 
 saveRDS(dist_tbl,file.path(results_dir,"Model_Output","dist_parm_gt.rds",fsep=.Platform$file.sep))
@@ -1136,7 +1136,7 @@ dist_tbl_s=tbl_merge(
   tbls = list(aer_tbl_s,
               tox_tbl_s,
               trap_tbl_s),
-  tab_spanner = c("aerial","trap","tox")
+  tab_spanner = c("aerial","tox","trap")
 ) 
 
 saveRDS(dist_tbl_s,file.path(results_dir,"Model_Output","dist_parm_gt_s.rds",fsep=.Platform$file.sep))
@@ -1150,7 +1150,7 @@ speed_tbl=tbl_merge(
   tbls = list(aer_tbl, 
               tox_tbl,
               trap_tbl),
-  tab_spanner = c("aerial","trap","tox")
+  tab_spanner = c("aerial","tox","trap")
 ) 
 
 saveRDS(speed_tbl,file.path(results_dir,"Model_Output","speed_parm_gt.rds",fsep=.Platform$file.sep))
@@ -1164,7 +1164,7 @@ speed_tbl_s=tbl_merge(
   tbls = list(aer_tbl_s, 
               tox_tbl_s,
               trap_tbl_s),
-  tab_spanner = c("aerial","trap","tox")
+  tab_spanner = c("aerial","tox","trap")
 ) 
 
 saveRDS(speed_tbl_s,file.path(results_dir,"Model_Output","speed_parm_gt_s.rds",fsep=.Platform$file.sep))
@@ -1179,7 +1179,7 @@ ncon_tbl=tbl_merge(
   tbls = list(aer_tbl,
               tox_tbl, 
               trap_tbl),
-  tab_spanner = c("aerial","trap","tox")
+  tab_spanner = c("aerial","tox","trap")
 ) 
 
 saveRDS(ncon_tbl,file.path(results_dir,"Model_Output","ncon_parm_gt.rds",fsep=.Platform$file.sep))
@@ -1192,21 +1192,21 @@ ncon_tbl_s=tbl_merge(
   tbls = list(aer_tbl,
               tox_tbl, 
               trap_tbl),
-  tab_spanner = c("aerial","trap","tox")
+  tab_spanner = c("aerial","tox","trap")
 ) 
 
 saveRDS(ncon_tbl_s,file.path(results_dir,"Model_Output","ncon_parm_gt_s.rds",fsep=.Platform$file.sep))
 
 ### nind gt summary tables----------------------
-aer_tbl <- tbl_regression(res_nind_rps_aer, exponentiate = TRUE)
-trap_tbl <- tbl_regression(res_nind_rps_trap, exponentiate = TRUE)
-tox_tbl <- make_sdmTMB_gt(res_nind_rps_tox, contox)
+aer_tbl <- tbl_regression(res_nind_rp_aer, exponentiate = TRUE)
+trap_tbl <- make_sdmTMB_gt(res_nind_rp_trap, contrap)
+tox_tbl <- make_sdmTMB_gt(res_nind_rp_tox, contox)
 
 nind_tbl=tbl_merge(
   tbls = list(aer_tbl,
               tox_tbl, 
               trap_tbl),
-  tab_spanner = c("aerial","trap","tox")
+  tab_spanner = c("aerial","tox","trap")
 ) 
 
 saveRDS(nind_tbl,file.path(results_dir,"Model_Output","nind_parm_gt.rds",fsep=.Platform$file.sep))
@@ -1220,7 +1220,7 @@ nind_tbl_s=tbl_merge(
   tbls = list(aer_tbl_s, 
               tox_tbl_s,
               trap_tbl_s),
-  tab_spanner = c("aerial","trap","tox")
+  tab_spanner = c("aerial","tox","trap")
 ) 
 
 saveRDS(nind_tbl_s,file.path(results_dir,"Model_Output","nind_parm_gt_s.rds",fsep=.Platform$file.sep))
