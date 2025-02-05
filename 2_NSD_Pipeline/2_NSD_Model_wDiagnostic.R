@@ -285,7 +285,7 @@ nsd_tbl=tbl_merge(
   tbls = list(aer_tbl, 
               tox_tbl,
               trap_tbl),
-  tab_spanner = c("aerial","trap","tox")
+  tab_spanner = c("aerial","tox","trap")
 ) 
 
 saveRDS(nsd_tbl,file.path(outdir,"Model_Output","nsd_parm_gt.rds",fsep=.Platform$file.sep))
@@ -298,7 +298,7 @@ nsd_tbl_s=tbl_merge(
   tbls = list(aer_tbl_s, 
               tox_tbl_s,
               trap_tbl_s),
-  tab_spanner = c("aerial","trap","tox")
+  tab_spanner = c("aerial","tox","trap")
 ) 
 
 saveRDS(nsd_tbl_s,file.path(outdir,"Model_Output","nsd_parm_gt_s.rds",fsep=.Platform$file.sep))
