@@ -72,7 +72,7 @@ dist_tbl=readRDS(file.path(outdir,"Model_Output","dist_parm_gt.rds",fsep=.Platfo
 speed_tbl=readRDS(file.path(outdir,"Model_Output","speed_parm_gt.rds",fsep=.Platform$file.sep))
 
 stk=tbl_stack(tbls=list(area_tbl,nsd_tbl,dist_tbl,speed_tbl),
-              group_header=c("Area (km2)","NSD (m2)","distance (km)","speed (km/hr)"))
+              group_header=c("Area (km^2)","NSD (m^2)","distance (km)","speed (km/hr)"))
 
 stk2=as_gt(stk) %>%             # convert gtsummary table to gt
   gt::tab_style(           # use gt::tab_style() to shade column
@@ -112,19 +112,17 @@ stk2=as_gt(stk) %>%             # convert gtsummary table to gt
     locations=list(gt::cells_body(columns=label,rows=c(1,4,8,11,14,18,21,24,28,31,34,38)))
   ) %>% gt::tab_style(
     style=list(cell_borders(sides="bottom",weight=px(1))),
-    #locations=list(gt::cells_body(columns=everything(),rows=c(1,4,8,11,14,18,21,24,28,31,34,38)))
     locations=list(gt::cells_body(columns=everything(),rows=c(which(stk$table_body$label=="period"),which(stk$table_body$label=="trt_ctrl"),which(stk$table_body$label=="trt_ctrl * period")))
     )
     ) %>%
   gt::tab_style(
     style=list(cell_text(size=11)),
     locations=list(gt::cells_body(columns=label,rows=c(which(stk$table_body$label=="period"),which(stk$table_body$label=="trt_ctrl"),which(stk$table_body$label=="trt_ctrl * period")))
-   # locations=list(which(stk$table_body$label=="period"),which(stk$table_body$label=="trt_ctrl"))
    )) %>%
   tab_options(data_row.padding = px(1))
 
 #For now, taking screenshot to put on sharepoint
-#stk2 |> gtsave("~/Downloads/tab_1.html")
+stk2 |> gtsave(file.path(outdir,"Parameter_Table","mvmt_rp_parms.html"))
 
 ## Parameter table for movement removal*period*sex models ----------------------
 
@@ -137,7 +135,7 @@ speed_tbl_s=readRDS(file.path(outdir,"Model_Output","speed_parm_gt_s.rds",fsep=.
 stk=tbl_stack(tbls=list(nsd_tbl_s,area_tbl_s,dist_tbl_s,speed_tbl_s),
               group_header=c("NSD (m2)","Area (km2)","distance (km)","speed (km/hr)"))
 
-as_gt(stk) %>%             # convert gtsummary table to gt
+stk2<-as_gt(stk) %>%             # convert gtsummary table to gt
   gt::tab_style(           # use gt::tab_style() to shade column
     style = list(gt::cell_fill(color = "white")),
     locations = gt::cells_body(columns = c(estimate_1,ci_1,p.value_1))
@@ -150,13 +148,13 @@ as_gt(stk) %>%             # convert gtsummary table to gt
     style = list(gt::cell_fill(color = "white")),
     locations = gt::cells_body(columns = c(estimate_3,ci_3,p.value_3))
   ) %>%
-  #gt::tab_style(
-  #  style=cell_text(size=11),
-  #  locations=gt::cells_body(columns=c(estimate_1,ci_1,p.value_1,
-  #                                     estimate_2,ci_2,p.value_2,
-  #                                     estimate_3,ci_3,p.value_3),
-  #                           rows=everything())
-  #) ###%>%
+  gt::tab_style(
+    style=cell_text(size=11),
+    locations=gt::cells_body(columns=c(estimate_1,ci_1,p.value_1,
+                                       estimate_2,ci_2,p.value_2,
+                                       estimate_3,ci_3,p.value_3),
+                             rows=everything())
+  ) %>%
   gt::tab_style(
     style=list(cell_text(size=11,weight="bold",color="black"),
                cell_fill(color="white"),
@@ -175,8 +173,10 @@ as_gt(stk) %>%             # convert gtsummary table to gt
     locations=list(gt::cells_body(columns=everything(),rows=c(which(stk$table_body$row_type=="label"))))
   ) %>% gt::tab_style(
     style=list(cell_borders(sides="bottom",weight=px(1))),
-    #locations=list(gt::cells_body(columns=everything(),rows=c(1,4,8,11,14,18,21,24,28,31,34,38)))
     locations=list(gt::cells_body(columns=everything(),rows=which(stk$table_body$row_type!="label")))) 
+
+stk2 |> gtsave(file.path(outdir,"Parameter_Table","mvmt_rps_parms.html"))
+
 
 ## Parameter table for contact removal*period models ---------------------------
 
@@ -187,7 +187,7 @@ stk=tbl_stack(tbls=list(ncon_tbl,nind_tbl),
               group_header=c("N total contacts",
                              "N unique contacts"))
 
-as_gt(stk) %>%             # convert gtsummary table to gt
+stk2<-as_gt(stk) %>%             # convert gtsummary table to gt
   gt::tab_style(           # use gt::tab_style() to shade column
     style = list(gt::cell_fill(color = "white")),
     locations = gt::cells_body(columns = c(estimate_1,ci_1,p.value_1))
@@ -200,13 +200,13 @@ as_gt(stk) %>%             # convert gtsummary table to gt
     style = list(gt::cell_fill(color = "white")),
     locations = gt::cells_body(columns = c(estimate_3,ci_3,p.value_3))
   ) %>%
-  #gt::tab_style(
-  #  style=cell_text(size=11),
-  #  locations=gt::cells_body(columns=c(estimate_1,ci_1,p.value_1,
-  #                                     estimate_2,ci_2,p.value_2,
-  #                                     estimate_3,ci_3,p.value_3),
-  #                           rows=everything())
-  #) ###%>%
+  gt::tab_style(
+    style=cell_text(size=11),
+    locations=gt::cells_body(columns=c(estimate_1,ci_1,p.value_1,
+                                       estimate_2,ci_2,p.value_2,
+                                       estimate_3,ci_3,p.value_3),
+                             rows=everything())
+  ) %>%
   gt::tab_style(
     style=list(cell_text(size=11,weight="bold",color="black"),
                cell_fill(color="white"),
@@ -225,10 +225,9 @@ as_gt(stk) %>%             # convert gtsummary table to gt
     locations=list(gt::cells_body(columns=everything(),rows=c(which(stk$table_body$row_type=="label"))))
   ) %>% gt::tab_style(
     style=list(cell_borders(sides="bottom",weight=px(1))),
-    #locations=list(gt::cells_body(columns=everything(),rows=c(1,4,8,11,14,18,21,24,28,31,34,38)))
     locations=list(gt::cells_body(columns=everything(),rows=which(stk$table_body$row_type!="label")))) 
 
-#stk2 |> gtsave("~/Downloads/tab_1.docx")
+stk2 |> gtsave(file.path(outdir,"Parameter_Table","contact_rp_parms.html"))
 
 ## Parameter table for contact removal*period*sex models -----------------------
 
@@ -236,9 +235,10 @@ ncon_tbl_s=readRDS(file.path(outdir,"Model_Output","ncon_parm_gt_s.rds",fsep=.Pl
 nind_tbl_s=readRDS(file.path(outdir,"Model_Output","nind_parm_gt_s.rds",fsep=.Platform$file.sep))
 
 stk=tbl_stack(tbls=list(ncon_tbl_s,nind_tbl_s),
-              group_header=c("NSD (m2)","Area (km2)","distance (km)","speed (km/hr)"))
+              group_header=c("N total contacts",
+                             "N unique contacts"))
 
-as_gt(stk) %>%             # convert gtsummary table to gt
+stk2<-as_gt(stk) %>%             # convert gtsummary table to gt
   gt::tab_style(           # use gt::tab_style() to shade column
     style = list(gt::cell_fill(color = "white")),
     locations = gt::cells_body(columns = c(estimate_1,ci_1,p.value_1))
@@ -251,13 +251,13 @@ as_gt(stk) %>%             # convert gtsummary table to gt
     style = list(gt::cell_fill(color = "white")),
     locations = gt::cells_body(columns = c(estimate_3,ci_3,p.value_3))
   ) %>%
-  #gt::tab_style(
-  #  style=cell_text(size=11),
-  #  locations=gt::cells_body(columns=c(estimate_1,ci_1,p.value_1,
-  #                                     estimate_2,ci_2,p.value_2,
-  #                                     estimate_3,ci_3,p.value_3),
-  #                           rows=everything())
-  #) ###%>%
+  gt::tab_style(
+    style=cell_text(size=11),
+    locations=gt::cells_body(columns=c(estimate_1,ci_1,p.value_1,
+                                       estimate_2,ci_2,p.value_2,
+                                       estimate_3,ci_3,p.value_3),
+                             rows=everything())
+  ) %>%
   gt::tab_style(
     style=list(cell_text(size=11,weight="bold",color="black"),
                cell_fill(color="white"),
@@ -279,7 +279,7 @@ as_gt(stk) %>%             # convert gtsummary table to gt
     #locations=list(gt::cells_body(columns=everything(),rows=c(1,4,8,11,14,18,21,24,28,31,34,38)))
     locations=list(gt::cells_body(columns=everything(),rows=which(stk$table_body$row_type!="label")))) 
 
-#stk2 |> gtsave("~/Downloads/tab_1.docx")
+stk2 |> gtsave(file.path(outdir,"Parameter_Table","contact_rps_parms.html"))
 
 # Format pred diffs ------------------------------------------------------------
 
