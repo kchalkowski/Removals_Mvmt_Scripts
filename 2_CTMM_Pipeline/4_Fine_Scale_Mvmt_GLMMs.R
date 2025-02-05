@@ -23,6 +23,8 @@
   library(dplyr)
   library(hrbrthemes)
   library(sdmTMB)
+  library(gt)
+  library(gtsummary)
 
 #sneaky homedir substitution
 switch(Sys.info()[['sysname']],
@@ -449,18 +451,15 @@ groupLocations = aggregate(speedtox[,c("mX","mY")], list(speedtox$animalid), mea
 testSpatialAutocorrelation(tox_res_rp2,groupLocations$mX,groupLocations$mY)
 #removed spatial autocorrelation, p=0.6789
 
-#saveRDS(res_speed_rps_tox,paste0(results_dir,"res_speed_rps_tox.rds"))
-
-
 # contacts - number --------
 ## aerial ------------
 conaer <- readRDS(paste0(objdir,"/pairwise_contacts_aer.rds"))
 
 #Rename period to match all responses
-colnames(conaer)[3]<-"period"
+colnames(conaer)[c(3,12)]<-c("period","trt_ctrl")
 
-conaer$Removal.Type <- 
-  factor(conaer$trt_typ,levels=c('ctrl','trt'))
+conaer$trt_ctrl <- 
+  factor(conaer$trt_ctrl,levels=c('ctrl','trt'))
 conaer$period <- 
   factor(conaer$period,levels=c('before','after'))
 
@@ -481,6 +480,9 @@ conaer <- conaer %>% left_join(
 
 conaer$animalid <- 
   factor(conaer$animalid)
+conaer$period <- 
+  factor(conaer$period,levels=c('before','after'))
+
 
 #set negligible offset to get gamma to work
 conaer$contacts_per_day_offset <- conaer$contacts_per_day+0.0001
@@ -490,7 +492,7 @@ conaer %>% group_by(contacts_per_day==0) %>% summarise(n=n())
 
 ### removal type * period -----
 res_ncon_rp_aer=glmmTMB(contacts_per_day_offset~(1|animalid)+
-                          Removal.Type*period,
+                          trt_ctrl*period,
                         data=conaer,
                         family=Gamma(link="log")
 )
@@ -520,31 +522,31 @@ conaer$mX_sc <- floor(conaer$mX/spatial_res)
 conaer$mY_sc <- floor(conaer$mY/spatial_res)
 meshaer_con <- make_mesh(conaer,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
 
-res_ncon_rp_aer_sf = sdmTMB(contacts_per_day_offset~
+res_ncon_rp_aer = sdmTMB(contacts_per_day_offset~
                               (1|animalid)+
-                               Removal.Type*period,
+                               trt_ctrl*period,
                              data=conaer,
                              family=Gamma(link="log"),
                              mesh=meshaer_con,
                              spatial="on")
 
-sanity(res_ncon_rp_aer_sf)
-aer_res_rp_sf <- simulate(res_ncon_rp_aer_sf, 
+sanity(res_ncon_rp_aer)
+aer_res_rp <- simulate(res_ncon_rp_aer, 
                           nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_ncon_rp_aer_sf, return_DHARMa = TRUE)
-aer_res_rp_sf2 = recalculateResiduals(aer_res_rp_sf,
+  dharma_residuals(res_ncon_rp_aer, return_DHARMa = TRUE)
+aer_res_rp2 = recalculateResiduals(aer_res_rp,
                                       group = as.factor(conaer$animalid),
                                       rotation="estimated")
-testSpatialAutocorrelation(aer_res_rp_sf2,
+testSpatialAutocorrelation(aer_res_rp2,
                            aer_groupLocations_con$mX,
                            aer_groupLocations_con$mY)
 
-#saveRDS(res_ncon_rp_aer_sf,paste0(results_dir,"res_ncon_rp_aer.rds"))
+#saveRDS(res_ncon_rp_aer,paste0(results_dir,"res_ncon_rp_aer.rds"))
 
 ### removal type * period *sex -----
 res_ncon_rps_aer=glmmTMB(contacts_per_day_offset~
                            (1|animalid)+
-                           Removal.Type*period*sex,
+                           trt_ctrl*period*sex,
                          data=conaer,
                          family=Gamma(link="log")
 )
@@ -572,22 +574,22 @@ conaer$mX_sc <- floor(conaer$mX/spatial_res)
 conaer$mY_sc <- floor(conaer$mY/spatial_res)
 meshaer_con <- make_mesh(conaer,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
 
-res_ncon_rps_aer_sf = sdmTMB(contacts_per_day_offset~
+res_ncon_rps_aer = sdmTMB(contacts_per_day_offset~
                                (1|animalid)+
-                              Removal.Type*period*sex,
+                              trt_ctrl*period*sex,
                             data=conaer,
                             family=Gamma(link="log"),
                             mesh=meshaer_con,
                             spatial="on")
 
-sanity(res_ncon_rps_aer_sf)
-aer_res_rps_sf <- simulate(res_ncon_rps_aer_sf,
+sanity(res_ncon_rps_aer)
+aer_res_rps <- simulate(res_ncon_rps_aer,
                           nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_ncon_rp_aer_sf, return_DHARMa = TRUE)
-aer_res_rps_sf2 = recalculateResiduals(aer_res_rps_sf,
+  dharma_residuals(res_ncon_rp_aer, return_DHARMa = TRUE)
+aer_res_rps2 = recalculateResiduals(aer_res_rps,
                                       group = as.factor(conaer$animalid),
                                       rotation="estimated")
-testSpatialAutocorrelation(aer_res_rps_sf2,
+testSpatialAutocorrelation(aer_res_rps2,
                            aer_groupLocations_con$mX,
                            aer_groupLocations_con$mY)
 
@@ -595,11 +597,12 @@ testSpatialAutocorrelation(aer_res_rps_sf2,
 
 ##trap ------
 contrap <- readRDS(paste0(objdir,"/pairwise_contacts_trap.rds"))
+colnames(contrap)[c(3,12)]<-c("period","trt_ctrl")
 
-contrap$Removal.Type <- 
+contrap$trt_ctrl <- 
   factor(contrap$trt_typ,levels=c('ctrl','trt'))
 contrap$period <- 
-  factor(contrap$removal.period.akdecalc,levels=c('before','during','after'))
+  factor(contrap$period,levels=c('before','during','after'))
 
 #distance thresholds
 ggplot(contrap)+
@@ -616,6 +619,9 @@ contrap <- contrap %>% left_join(
 
 contrap$animalid <- 
   factor(contrap$animalid)
+contrap$period <- 
+  factor(contrap$period,levels=c('before','during','after'))
+
 
 contrap$contacts_per_day_offset <- contrap$contacts_per_day+0.0001
 
@@ -623,7 +629,7 @@ contrap %>% group_by(contacts_per_day==0) %>% summarise(n=n())
 
 ### removal type * period -----
 res_ncon_rp_trap=glmmTMB(contacts_per_day_offset~(1|animalid)+
-                           Removal.Type*period,
+                           trt_ctrl*period,
                          data=contrap,
                          family=Gamma(link="log")
                          )
@@ -652,31 +658,31 @@ contrap$mX_sc <- floor(contrap$mX/spatial_res)
 contrap$mY_sc <- floor(contrap$mY/spatial_res)
 meshtrap_con <- make_mesh(contrap,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
 
-res_ncon_rp_trap_sf = sdmTMB(contacts_per_day_offset~(1|animalid)+
-                              Removal.Type*period*sex,
+res_ncon_rps_trap = sdmTMB(contacts_per_day_offset~(1|animalid)+
+                              trt_ctrl*period*sex,
                             data=contrap,
                             family=Gamma(link="log"),
                             mesh=meshtrap_con,
                             spatial="on")
 
-sanity(res_ncon_rp_trap_sf)
-trap_res_rp_sf <- simulate(res_ncon_rp_trap_sf,
+sanity(res_ncon_rps_trap)
+trap_res_rp <- simulate(res_ncon_rps_trap,
                           nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_ncon_rp_trap_sf, return_DHARMa = TRUE)
-trap_res_rp_sf2 = recalculateResiduals(trap_res_rp_sf,
+  dharma_residuals(res_ncon_rps_trap, return_DHARMa = TRUE)
+trap_res_rp2 = recalculateResiduals(trap_res_rp,
                                       group = as.factor(contrap$animalid),
                                       rotation="estimated")
-testSpatialAutocorrelation(trap_res_rp_sf2,
+testSpatialAutocorrelation(trap_res_rp2,
                            trap_groupLocations_con$mX,
                            trap_groupLocations_con$mY)
 #spatial autocorrelation p=0.19
 
-#saveRDS(res_ncon_rp_trap_sf,paste0(results_dir,"res_ncon_rp_trap.rds"))
+#saveRDS(res_ncon_rp_trap,paste0(results_dir,"res_ncon_rp_trap.rds"))
 
 ### removal type * period *sex -----
 res_ncon_rps_trap=glmmTMB(contacts_per_day_offset~
                             (1|animalid)+
-                            Removal.Type*period*sex,
+                            trt_ctrl*period*sex,
                           data=contrap,
                           family=Gamma(link="log")
                           )
@@ -699,11 +705,12 @@ testSpatialAutocorrelation(trap_res_ncon_rps2,
 
 ##tox ------
 contox <- readRDS(paste0(objdir,"/pairwise_contacts_tox.rds"))
+colnames(contox)[c(3,12)]<-c("period","trt_ctrl")
 
-contox$Removal.Type <- 
+contox$trt_ctrl <- 
   factor(contox$trt_typ,levels=c('ctrl','trt'))
 contox$period <- 
-  factor(contox$removal.period.akdecalc,levels=c('before','during','after'))
+  factor(contox$period,levels=c('before','during','after'))
 
 #distance thresholds
 ggplot(contox)+
@@ -720,6 +727,8 @@ contox <- contox %>% left_join(
 
 contox$animalid <- 
   factor(contox$animalid)
+contox$period <- 
+  factor(contox$period,levels=c('before','during','after'))
 
 contox$contacts_per_day_offset <- contox$contacts_per_day+0.0001
 
@@ -731,7 +740,7 @@ contox %>% group_by(contacts_per_day==0) %>% summarise(n=n())
 ### removal type * period -----
 res_ncon_rp_tox=glmmTMB(contacts_per_day_offset~
                           (1|animalid)+
-                          Removal.Type*period,
+                          trt_ctrl*period,
                         data=contox,
                         family=Gamma(link="log")
                         )
@@ -758,7 +767,7 @@ testSpatialAutocorrelation(tox_res_ncon_rp2,
 ### removal type * period *sex -----
 res_ncon_rps_tox=glmmTMB(contacts_per_day_offset~
                            (1|animalid)+
-                           Removal.Type*period*sex,
+                           trt_ctrl*period*sex,
                          data=contox,
                          family=Gamma(link="log")
                          )
@@ -784,9 +793,9 @@ testSpatialAutocorrelation(tox_res_ncon_rps2,
 cn_model_list=list(res_ncon_rp_tox,
                res_ncon_rps_tox,
                res_ncon_rps_trap,
-               res_ncon_rp_trap_sf,
+               res_ncon_rp_trap,
                res_ncon_rps_aer,
-               res_ncon_rp_aer_sf
+               res_ncon_rp_aer
                )
 
 # contacts - degree --------
@@ -800,7 +809,7 @@ conaer$indivs_per_day_offset <- conaer$indivs_per_day+0.0001
 ## removal type * period -----
 res_nind_rp_aer=glmmTMB(indivs_per_day_offset~
                           (1|animalid)+
-                          Removal.Type*period,
+                          trt_ctrl*period,
                         data=conaer,
                         family=Gamma(link="log")
                         )
@@ -825,7 +834,7 @@ testSpatialAutocorrelation(aer_res_nind_rp2,
 ## removal type * period *sex -----
 res_nind_rps_aer=glmmTMB(indivs_per_day_offset~
                            (1|animalid)+
-                           Removal.Type*period*sex,
+                           trt_ctrl*period*sex,
                          data=conaer,
                          family=Gamma(link="log")
                          )
@@ -857,7 +866,7 @@ contrap$indivs_per_day_offset <- contrap$indivs_per_day+0.0001
 ## removal type * period -----
 res_nind_rp_trap=glmmTMB(indivs_per_day_offset~
                            (1|animalid)+
-                           Removal.Type*period,
+                           trt_ctrl*period,
                          data=contrap,
                          family=Gamma(link="log")
                          )
@@ -884,32 +893,32 @@ contrap$mX_sc <- floor(contrap$mX/spatial_res)
 contrap$mY_sc <- floor(contrap$mY/spatial_res)
 meshtrap_con <- make_mesh(contrap,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
 
-res_nind_rp_trap_sf = sdmTMB(indivs_per_day_offset~
+res_nind_rp_trap = sdmTMB(indivs_per_day_offset~
                                (1|animalid)+
-                               Removal.Type*period,
+                               trt_ctrl*period,
                              data=contrap,
                              family=Gamma(link="log"),
                              mesh=meshtrap_con,
                              spatial="on")
 
-sanity(res_nind_rp_trap_sf)
-trap_res_nind_rp_sf <- simulate(res_nind_rp_trap_sf,
+sanity(res_nind_rp_trap)
+trap_res_nind_rp <- simulate(res_nind_rp_trap,
                            nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_nind_rp_trap_sf, return_DHARMa = TRUE)
-trap_res_nind_rp_sf2 = recalculateResiduals(trap_res_nind_rp_sf,
+  dharma_residuals(res_nind_rp_trap, return_DHARMa = TRUE)
+trap_res_nind_rp2 = recalculateResiduals(trap_res_nind_rp,
                                        group = as.factor(contrap$animalid),
                                        rotation="estimated")
-testSpatialAutocorrelation(trap_res_nind_rp_sf2,
+testSpatialAutocorrelation(trap_res_nind_rp2,
                            trap_groupLocations_con$mX,
                            trap_groupLocations_con$mY)
 #no spatial autocorrelation p=0.08
 
-#saveRDS(res_nind_rp_trap_sf,paste0(results_dir,"res_nind_rp_trap.rds"))
+#saveRDS(res_nind_rp_trap,paste0(results_dir,"res_nind_rp_trap.rds"))
 
 ## removal type * period *sex -----
 res_nind_rps_trap=glmmTMB(indivs_per_day_offset~
                             (1|animalid)+
-                            Removal.Type*period*sex,
+                            trt_ctrl*period*sex,
                           data=contrap,
                           family=Gamma(link="log")
                           )
@@ -941,7 +950,7 @@ contox$indivs_per_day_offset <- contox$indivs_per_day+0.0001
 ## removal type * period -----
 res_nind_rp_tox=glmmTMB(indivs_per_day_offset~
                           (1|animalid)+
-                          Removal.Type*period,
+                          trt_ctrl*period,
                         data=contox,
                         family=Gamma(link="log")
                         )
@@ -967,32 +976,32 @@ contox$mX_sc <- floor(contox$mX/spatial_res)
 contox$mY_sc <- floor(contox$mY/spatial_res)
 meshtox_con <- make_mesh(contox,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
 
-res_nind_rp_tox_sf = sdmTMB(indivs_per_day_offset~
+res_nind_rp_tox = sdmTMB(indivs_per_day_offset~
                                (1|animalid)+
-                               Removal.Type*period,
+                               trt_ctrl*period,
                              data=contox,
                              family=Gamma(link="log"),
                              mesh=meshtox_con,
                              spatial="on")
 
-sanity(res_nind_rp_tox_sf)
-tox_res_nind_rp_sf <- simulate(res_nind_rp_tox_sf,
+sanity(res_nind_rp_tox)
+tox_res_nind_rp <- simulate(res_nind_rp_tox,
                                 nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_nind_rp_tox_sf, return_DHARMa = TRUE)
-tox_res_nind_rp_sf2 = recalculateResiduals(tox_res_nind_rp_sf,
+  dharma_residuals(res_nind_rp_tox, return_DHARMa = TRUE)
+tox_res_nind_rp2 = recalculateResiduals(tox_res_nind_rp,
                                             group = as.factor(contox$animalid),
                                             rotation="estimated")
-testSpatialAutocorrelation(tox_res_nind_rp_sf2,
+testSpatialAutocorrelation(tox_res_nind_rp2,
                            tox_groupLocations_con$mX,
                            tox_groupLocations_con$mY)
 #no spatial autocorrelation p=0.13
 
-#saveRDS(res_nind_rp_tox_sf,paste0(results_dir,"res_nind_rp_tox.rds"))
+#saveRDS(res_nind_rp_tox,paste0(results_dir,"res_nind_rp_tox.rds"))
 
 ## removal type * period *sex -----
 res_nind_rps_tox=glmmTMB(indivs_per_day_offset~
                            (1|animalid)+
-                           Removal.Type*period*sex,
+                           trt_ctrl*period*sex,
                          data=contox,
                          family=Gamma(link="log")
                          )
@@ -1019,34 +1028,34 @@ testSpatialAutocorrelation(tox_res_nind_rps2,
 # contox$mY_sc <- floor(contox$mY/spatial_res)
 # meshtox_con <- make_mesh(contox,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
 
-res_nind_rps_tox_sf = sdmTMB(indivs_per_day_offset~
+res_nind_rps_tox = sdmTMB(indivs_per_day_offset~
                               (1|animalid)+
-                              Removal.Type*period*sex,
+                              trt_ctrl*period*sex,
                             data=contox,
                             family=Gamma(link="log"),
                             mesh=meshtox_con,
                             spatial="on")
 
-sanity(res_nind_rps_tox_sf)
-tox_res_nind_rps_sf <- simulate(res_nind_rps_tox_sf,
+sanity(res_nind_rps_tox)
+tox_res_nind_rps <- simulate(res_nind_rps_tox,
                                nsim = 544,type = 'mle-mvn') %>%
-  dharma_residuals(res_nind_rps_tox_sf, return_DHARMa = TRUE)
-tox_res_nind_rps_sf2 = recalculateResiduals(tox_res_nind_rps_sf,
+  dharma_residuals(res_nind_rps_tox, return_DHARMa = TRUE)
+tox_res_nind_rps2 = recalculateResiduals(tox_res_nind_rps,
                                            group = as.factor(contox$animalid),
                                            rotation="estimated")
-testSpatialAutocorrelation(tox_res_nind_rps_sf2,
+testSpatialAutocorrelation(tox_res_nind_rps2,
                            tox_groupLocations_con$mX,
                            tox_groupLocations_con$mY)
 #no spatial autocorrelation p=0.08
 
-#saveRDS(res_nind_rps_tox_sf,paste0(results_dir,"res_nind_rps_tox.rds"))
+#saveRDS(res_nind_rps_tox,paste0(results_dir,"res_nind_rps_tox.rds"))
 
 ci_model_list=list(res_nind_rp_aer,
                   res_nind_rps_aer,
-                  res_nind_rp_trap_sf,
+                  res_nind_rp_trap,
                   res_nind_rps_trap,
-                  res_nind_rp_tox_sf,
-                  res_nind_rps_tox_sf)
+                  res_nind_rp_tox,
+                  res_nind_rps_tox)
 
 
 #saveRDS(conaer,paste0(results_dir,"conaer.rds"))
@@ -1162,7 +1171,7 @@ saveRDS(speed_tbl_s,file.path(results_dir,"Model_Output","speed_parm_gt_s.rds",f
 
 
 ### ncon gt summary tables----------------------
-aer_tbl <- tbl_regression(res_ncon_rp_aer, exponentiate = TRUE)
+aer_tbl <- make_sdmTMB_gt(res_ncon_rp_aer,conaer)
 trap_tbl <- tbl_regression(res_ncon_rp_trap, exponentiate = TRUE)
 tox_tbl <- tbl_regression(res_ncon_rp_tox, exponentiate = TRUE)
 
@@ -1175,8 +1184,7 @@ ncon_tbl=tbl_merge(
 
 saveRDS(ncon_tbl,file.path(results_dir,"Model_Output","ncon_parm_gt.rds",fsep=.Platform$file.sep))
 
-
-aer_tbl_s <- tbl_regression(res_ncon_rps_aer, exponentiate = TRUE)
+aer_tbl_s <- make_sdmTMB_gt(res_ncon_rps_aer, conaer)
 trap_tbl_s <- tbl_regression(res_ncon_rps_trap, exponentiate = TRUE)
 tox_tbl_s <- tbl_regression(res_ncon_rps_trap, exponentiate = TRUE)
 
@@ -1192,7 +1200,7 @@ saveRDS(ncon_tbl_s,file.path(results_dir,"Model_Output","ncon_parm_gt_s.rds",fse
 ### nind gt summary tables----------------------
 aer_tbl <- tbl_regression(res_nind_rps_aer, exponentiate = TRUE)
 trap_tbl <- tbl_regression(res_nind_rps_trap, exponentiate = TRUE)
-tox_tbl <- tbl_regression(res_nind_rps_tox, exponentiate = TRUE)
+tox_tbl <- make_sdmTMB_gt(res_nind_rps_tox, contox)
 
 nind_tbl=tbl_merge(
   tbls = list(aer_tbl, 
@@ -1206,7 +1214,7 @@ saveRDS(nind_tbl,file.path(results_dir,"Model_Output","nind_parm_gt.rds",fsep=.P
 
 aer_tbl_s <- tbl_regression(res_nind_rps_aer, exponentiate = TRUE)
 trap_tbl_s <- tbl_regression(res_nind_rps_trap, exponentiate = TRUE)
-tox_tbl_s <- tbl_regression(res_nind_rps_tox, exponentiate = TRUE)
+tox_tbl_s <- make_sdmTMB_gt(res_nind_rps_tox, contox)
 
 nind_tbl_s=tbl_merge(
   tbls = list(aer_tbl_s, 
@@ -1225,10 +1233,10 @@ for(i in 1:length(mods)){
   #coefs=summary(mods[[i]])$coef$cond
 
   if(length(grep("rps",models[i]))==0){
-    #add if statement here and inside else-- if ncon or nind in model name, trt_ctrl is Removal.Type
+    #add if statement here and inside else-- if ncon or nind in model name, trt_ctrl is trt_ctrl
     if(length(grep("ncon",models[i]))!=0|
        length(grep("nind",models[i]))!=0){
-      tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","period")))
+      tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","period")))
     } else{
       tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","period")))
     }
@@ -1236,7 +1244,7 @@ for(i in 1:length(mods)){
   } else{
     if(length(grep("ncon",models[i]))!=0|
        length(grep("nind",models[i]))!=0){
-      tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("Removal.Type","period","sex")))
+      tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","period","sex")))
       } else{
         tmp=as.data.frame(ggeffects::predict_response(mods[[i]], terms=c("trt_ctrl","period","sex")))
       }
@@ -1294,7 +1302,7 @@ for(i in 1:length(mods)){
       if(nrow(coefs2)>1){
         if(length(grep("ncon",models[i]))!=0|
            length(grep("nind",models[i]))!=0){
-          coefs2=as.data.frame(coefs2[grep("Removal.Type",rownames(coefs2)),,drop=FALSE])
+          coefs2=as.data.frame(coefs2[grep("trt_ctrl",rownames(coefs2)),,drop=FALSE])
           coefs2=as.data.frame(coefs2[grep("period",rownames(coefs2)),,drop=FALSE])
         } else{
           coefs2=as.data.frame(coefs2[grep("trt_ctrl",rownames(coefs2)),,drop=FALSE])
@@ -1397,6 +1405,3 @@ if(!dir.exists(file.path(results_dir,"Model_Output"))){dir.create(file.path(outd
 saveRDS(preds,file.path(results_dir,"Model_Output","spdist_preds.rds"))
 saveRDS(allc,file.path(results_dir,"Model_Output","spdist_intxns.rds"))
 saveRDS(parms,file.path(results_dir,"Model_Output","spdist_full_param.rds"))
-
-
-
