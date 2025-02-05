@@ -215,7 +215,7 @@ area_tbl=tbl_merge(
   tbls = list(aer_tbl, 
               tox_tbl,
               trap_tbl),
-  tab_spanner = c("aerial","trap","tox")
+  tab_spanner = c("aerial","tox","trap")
 ) 
 
 saveRDS(area_tbl,file.path(outdir,"Model_Output","area_parm_gt.rds",fsep=.Platform$file.sep))
