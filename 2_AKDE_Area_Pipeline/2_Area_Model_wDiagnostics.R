@@ -213,8 +213,8 @@ tox_tbl <- tbl_regression(res.rp_tox, exponentiate = TRUE)
 
 area_tbl=tbl_merge(
   tbls = list(aer_tbl, 
-              trap_tbl,
-              tox_tbl),
+              tox_tbl,
+              trap_tbl),
   tab_spanner = c("aerial","trap","tox")
 ) 
 

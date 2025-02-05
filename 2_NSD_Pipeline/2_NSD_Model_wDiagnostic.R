@@ -283,8 +283,8 @@ tox_tbl <- tbl_regression(res.rp_tox, exponentiate = TRUE)
 
 nsd_tbl=tbl_merge(
   tbls = list(aer_tbl, 
-              trap_tbl,
-              tox_tbl),
+              tox_tbl,
+              trap_tbl),
   tab_spanner = c("aerial","trap","tox")
 ) 
 
@@ -296,8 +296,8 @@ tox_tbl_s <- tbl_regression(res.rps_tox, exponentiate = TRUE)
 
 nsd_tbl_s=tbl_merge(
   tbls = list(aer_tbl_s, 
-              trap_tbl_s,
-              tox_tbl_s),
+              tox_tbl_s,
+              trap_tbl_s),
   tab_spanner = c("aerial","trap","tox")
 ) 
 
