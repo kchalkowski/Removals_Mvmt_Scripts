@@ -479,9 +479,23 @@ trap_id_filter=geo.trap %>%
 
 geo.trap=geo.trap[!(geo.trap$animalid%in%trap_id_filter),]
 
+# Make vector of animalids that died during toxicant removals ------------------
+
+died.tox=geo.tox %>% 
+  dplyr::group_by(animalid,removal.period.akdecalc) %>%
+  dplyr::summarise(n_distinct(week)) %>%
+  dplyr::summarise(period=n_distinct(removal.period.akdecalc)) %>%
+  dplyr::filter(period<3) %>%
+  dplyr::select(animalid) %>%
+  as.data.frame()
+
 # Write out data and summaries -------------------------------------------------
 
-#write out csv
+#write out csv for main dfs
 saveRDS(geo.tox,file.path(objdir,"geotox.rds"))
 saveRDS(geo.trap,file.path(objdir,"geotrap.rds"))
 saveRDS(geo.aer,file.path(objdir,"geoaer.rds"))
+
+#write out ref tables
+saveRDS(died.tox,file.path(objdir,"diedtox.rds"))
+
