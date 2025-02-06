@@ -28,6 +28,7 @@ library(mapview)
 library(sdmTMB)
 library(gt)
 library(gtsummary)
+library(colorspace)
 
 #Set dirs
 input=file.path(home,"1_Data","Input",fsep=.Platform$file.sep)
@@ -777,15 +778,7 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   #doing manually in preview
   #intxn=intxn[,c(8,4,5,6,7,1,2,3,9)]
   intxn[intxn$sex!="whole"&intxn$alpha==1,]
-  #area:
-  #tox reduction than controls
-  #nsd:
-  #tox increase than controls
-  #distance:
-  #tox: 
-  #trap
-  #speed
-  #aer
+
   colnames(pdiffs5)[2]="trt"
   pdiffs5$sex<-tolower(pdiffs5$sex)
   pdiff_int=left_join(pdiffs5,intxn,by=c("sex","trt","period","response"))
@@ -794,7 +787,6 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   #pdiff_int
   pdiff_int=pdiff_int[complete.cases(pdiff_int),]
   pdiff_int=pdiff_int[pdiff_int$alpha==1,]
-  
   
 ## Make contact dot whiskers  ------------------------------------------------------------
   #trt.keys,trt.col,preds_ylab_list,xlabtitle
@@ -852,10 +844,6 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   
 # Make coded pdiffs table -----------------
   
-  
-  
-  
-  
   #calc treatment mag diffs
   pdiffs3$during_trt_ctrl<-pdiffs3$before_during_trt/pdiffs3$before_during_ctrl
   pdiffs3$after_trt_ctrl<-pdiffs3$before_after_trt/pdiffs3$before_after_ctrl
@@ -906,9 +894,6 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   #make just key and mag
   ptbl1=ptbl1[,c(8,9)]
   
-  #pdiffs5
-  head(pdiffs5)
-  head(intxn)
   #intxn2=intxn
   str_sub(intxn[intxn$response=="nsd",]$model[grep("rps",intxn[intxn$response=="nsd",]$model)],4L,8L)<-"_nsd_rps_"
   str_sub(intxn[intxn$response=="area",]$model[grep("rps",intxn[intxn$response=="area",]$model)],4L,8L)<-"_area_rps_"
@@ -929,23 +914,19 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   intxn2=intxn[,c(9,10)] #trim to alpha and key only
   pd=left_join(pdiffs5,intxn2,by="key")
   
-  #filter out known not significant
-  pd=pd[pd$sex=="male"|pd$alpha==1,]
-  
   #significant intxns for male ref group models:
-  #trap NSD during, trap distance during
   pdm=pd[pd$sex=="male",]
-  pd=pd[pd$sex!="male",]
-  pdm=pdm[pdm$key=="nsd_trap_male_during"|
-        pdm$key=="distance_trap_male_during",]
-  pdm=pdm[complete.cases(pdm),]
-  pd=pd[complete.cases(pd),]
-  pdf=rbind(pd,pdm)
-  
+  pdm[pdm$key=="nsd_trap_male_during"|pdm$key=="distance_trap_male_during",]$alpha=1
+  pdm[pdm$key!="nsd_trap_male_during"&pdm$key!="distance_trap_male_during",]$alpha=0.1
+  pdf=pd[pd$sex=="female",]
+  pda=rbind(pdf,pdm)
+  pda=pda[complete.cases(pda),]
+
   #join to get magnitude diffs
-  pdj=left_join(pdf,ptbl1,by="key")
+  pdj=left_join(pda,ptbl1,by="key")
   
   pdj$mag<-abs(pdj$mag)
+  
   #change magnitude sign to be related to direction of effect, movement
   pdj[pdj$pred<0,]$mag=pdj[pdj$pred<0,]$mag*(-1)
   
@@ -954,136 +935,82 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   pdj$response[pdj$response=="area"]<-"area (km^2)"
   pdj$response[pdj$response=="nsd"]<-"nsd (m^2)"
   
+  #change 0.1 alpha to 0, gets confusing otherwise
+  pdj[pdj$alpha==0.1,]$alpha<-0
   
-  #View(pdj)
-  #pdj$scale=NA
-  #pdj$scale[pdj$mag<(1)]<-"Reversal, small diff"
-  #pdj$scale[pdj$mag<(-2)]<-"Reversal, moderate diff"
-  #pdj$scale[pdj$mag<(-20)]<-"Reversal, strong diff"
-  #pdj$scale[pdj$mag>(1)]<-"Same, small diff"
-  #pdj$scale[pdj$mag>(2)]<-"Same, moderate diff"
-  #pdj$scale[pdj$mag>(3)]<-"Same, strong diff"
+  #clean digits
+  pdj$pred<-round(pdj$pred,digits=2)
   
-  #pdj$scale<-as.factor(pdj$scale)
-  #levels(pdj$scale)
-  #pdj$scale=forcats::fct_expand(pdj$scale,"Same, small diff","Same, moderate diff")
-  #pdj$scale=forcats::fct_relevel(pdj$scale,c("Same, strong diff",
-                                            # "Same, moderate diff",
-                                            # "Same, small diff",
-                                            # "Reversal, small diff",
-                                            # "Reversal, moderate diff",
-                                            # "Reversal, strong diff"))
-  
+  #remove contact ones, plot separately
   pdjmv=pdj[pdj$response!="nind"&pdj$response!="ncon",]
+  pdjco=pdj[pdj$response=="nind"|pdj$response=="ncon",]
   
-  #change v large value to alter scale
-  pdjmv$mag[pdjmv$mag<(-20)]<-(-10)
-  
-  pdjmv$pred<-round(pdjmv$pred,digits=2)
-  
-  pdjmv_w=pdjmv[pdjmv$sex=="whole",]
   pdjmv_f=pdjmv[pdjmv$sex=="female",]
   pdjmv_m=pdjmv[pdjmv$sex=="male",]
-  
-  #library(colorspace)
-  
-  #heatmap_plot <- 
-    #pdjmv_w %>% filter(rem=="aer") %>%
-    ggplot(pdjmv_m,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
-    geom_tile(color = "white",show.legend=TRUE) + # Create heatmap
-    geom_text(color = "black", size = 4) + # Add text labels
-    #scale_fill_gradient(low = "lightblue", high = "darkblue") + # Set color gradient
-    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-6,6),h1=6,c1=10,c2=10,c3=10) + 
-    #scale_fill_discrete(drop=FALSE)+
-     # scale_fill_manual(values = 
-    #                      c("Same, strong diff" = "#1497f5", 
-    #                        "Same, moderate diff" = "#51b0f5",
-    #                        "Same, small diff" = "#a5d1f0", 
-    #                        "Reversal, small diff" = "#f5abb0",
-    #                        "Reversal, moderate diff" = "#f2636b", 
-    #                        "Reversal, strong diff" = "#ff212c"), 
-    #                    drop = FALSE)+
-    theme_minimal() + # Set theme
+
+  heatmap_mvmt_f <- 
+    ggplot(pdjmv_f,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
+    geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
+    geom_text(color = "black", size = 2.5) + # Add text labels
+    scale_alpha(range=c(0,1))+
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-18,18),h1=6,c1=10,c2=10,c3=10) + 
+    theme_ipsum() + # Set theme
     labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
     theme(axis.text.x = element_text(angle = 45, hjust = 1))+
-    facet_wrap(~rem)
+    facet_wrap(~rem)+
+    theme(legend.position="none",
+          axis.text.x=element_blank(),
+          axis.title.x=element_blank())
   
-    
-     
-      
-    
-  #?scale_fill_discrete
-  #heatmap_plot
-  #formatC(pdjmv_w$pred, format = "e",digits=2)
-# Make powerpoint figures -----------------
-  #same as above, just formatted with diff text sizes and grouped to fit ppt slide
-  #MakeDotWhisker=function(trt.keys,trt.col,preds_ylab_list,xlabtitle,xaxislabels,legend,facet_label,yaxislabels,pt_size,l_size){
-
-  # NSD
-  a_nsd_w=MakeDotWhisker(keys[grep("nsd_aer_whole",keys)],aer.hex,"NSD (m^2)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
-  t_nsd_w=MakeDotWhisker(keys[grep("nsd_trap_whole",keys)],trap.hex,"NSD (m^2)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
-  x_nsd_w=MakeDotWhisker(keys[grep("nsd_tox_whole",keys)],tox.hex,"NSD (m^2)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
+  heatmap_mvmt_m <- 
+    ggplot(pdjmv_m,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
+    geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
+    geom_text(color = "black", size = 2.5) + # Add text labels
+    scale_alpha(range=c(0,1))+
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-18,18),h1=6,c1=10,c2=10,c3=10) + 
+    theme_ipsum() + # Set theme
+    labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+    facet_wrap(~rem)+
+    theme(legend.position="bottom")
   
-  # distance
-  a_dis_w=MakeDotWhisker(keys[grep("distance_aer_whole",keys)],aer.hex,"distance (km)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
-  t_dis_w=MakeDotWhisker(keys[grep("distance_trap_whole",keys)],trap.hex,"distance (km)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
-  x_dis_w=MakeDotWhisker(keys[grep("distance_tox_whole",keys)],tox.hex,"distance (km)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
+  heatmaps_mvmt=cowplot::plot_grid(heatmap_mvmt_f,NULL,heatmap_mvmt_m, ncol=1, rel_heights=c(0.5,-0.1,0.75))
+  ggsave(file.path(outdir,"HeatMaps","heatmap_mvmt.png"),heatmaps_mvmt,width=6.5,height=6.5,units="in")
   
-  # speed
-  a_sp_w=MakeDotWhisker(keys[grep("speed_aer_whole",keys)],aer.hex,"speed (km/hr)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
-  t_sp_w=MakeDotWhisker(keys[grep("speed_trap_whole",keys)],trap.hex,"speed (km/hr)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
-  x_sp_w=MakeDotWhisker(keys[grep("speed_tox_whole",keys)],tox.hex,"speed (km/hr)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
+  #Contact ones
+  pdjco_f=pdjco[pdjco$sex=="female",]
+  pdjco_m=pdjco[pdjco$sex=="male",]
   
-  # area
-  a_are_w=MakeDotWhisker(keys[grep("area_aer_whole",keys)],aer.hex,"area (km^2)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
-  t_are_w=MakeDotWhisker(keys[grep("area_trap_whole",keys)],trap.hex,"area (km^2)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
-  x_are_w=MakeDotWhisker(keys[grep("area_tox_whole",keys)],tox.hex,"area (km^2)","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,14)
+  heatmap_con_f <- 
+    ggplot(pdjco_f,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
+    geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
+    geom_text(color = "black", size = 2.5) + # Add text labels
+    scale_alpha(range=c(0,1))+
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-18,18),h1=6,c1=10,c2=10,c3=10) + 
+    theme_ipsum() + # Set theme
+    labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+    facet_wrap(~rem)+
+    theme(legend.position="none",
+          axis.text.x=element_blank(),
+          axis.title.x=element_blank())
   
-  #combine removal types
-  aer_ppt=cowplot::plot_grid(a_nsd_w,a_dis_w,a_sp_w,a_are_w,nrow=1,rel_widths=c(0.65,0.65,0.65,0.65))
-  ggsave("~/Downloads/aerppt.png",aer_ppt,width=8,height=2,units="in")
+  heatmap_con_m <- 
+    ggplot(pdjco_m,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
+    geom_tile(alpha=0,color = "white",show.legend=TRUE) + # Create heatmap
+    geom_text(color = "black", size = 2.5) + # Add text labels
+    #scale_alpha(range=c(0,1))+
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-18,18),h1=6,c1=10,c2=10,c3=10) + 
+    theme_ipsum() + # Set theme
+    labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+    facet_wrap(~rem)+
+    theme(legend.position="bottom")
   
-  trap_ppt=cowplot::plot_grid(t_nsd_w,t_dis_w,t_sp_w,t_are_w,nrow=1,rel_widths=c(0.65,0.65,0.65,0.65))
-  ggsave("~/Downloads/trapppt.png",trap_ppt,width=8,height=2,units="in")
+  heatmaps_con=cowplot::plot_grid(heatmap_con_f,NULL,heatmap_con_m, ncol=1, rel_heights=c(0.5,-0.1,0.75))
+  ggsave(file.path(outdir,"HeatMaps","heatmap_contact.png"),heatmaps_con,width=6.5,height=6.5,units="in")
   
-  aer_ppt=cowplot::plot_grid(x_nsd_w,x_dis_w,x_sp_w,x_are_w,nrow=1,rel_widths=c(0.65,0.65,0.65,0.65))
-  ggsave("~/Downloads/toxppt.png",aer_ppt,width=8,height=2,units="in")
   
-# Sex interactions 
-  # NSD
-  a_nsd_w=MakeDotWhisker(keys[grep("nsd_aer_sex",keys)],aer.hex,"NSD (m^2)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,12)
-  t_nsd_w=MakeDotWhisker(keys[grep("nsd_trap_sex",keys)],trap.hex,"NSD (m^2)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,12)
-  x_nsd_w=MakeDotWhisker(keys[grep("nsd_tox_sex",keys)],tox.hex,"NSD (m^2)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,12)
   
-  # distance
-  a_dis_w=MakeDotWhisker(keys[grep("distance_aer_sex",keys)],aer.hex,"distance (km)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,12)
-  t_dis_w=MakeDotWhisker(keys[grep("distance_trap_sex",keys)],trap.hex,"distance (km)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,12)
-  x_dis_w=MakeDotWhisker(keys[grep("distance_tox_sex",keys)],tox.hex,"distance (km)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,12)
-  
-  # speed
-  a_sp_w=MakeDotWhisker(keys[grep("speed_aer_sex",keys)],aer.hex,"speed (km/hr)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,12)
-  t_sp_w=MakeDotWhisker(keys[grep("speed_trap_sex",keys)],trap.hex,"speed (km/hr)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,12)
-  x_sp_w=MakeDotWhisker(keys[grep("speed_tox_sex",keys)],tox.hex,"speed (km/hr)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,12)
-  
-  # area
-  a_are_w=MakeDotWhisker(keys[grep("area_aer_sex",keys)],aer.hex,"area (km^2)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,12)
-  #t_are_w=MakeDotWhisker(keys[grep("area_trap_sex",keys)],trap.hex,"area (km^2)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,14)
-  x_are_w=MakeDotWhisker(keys[grep("area_tox_sex",keys)],tox.hex,"area (km^2)","Removal Period",TRUE,FALSE,TRUE,TRUE,4,1,12)
-  
-  #combine removal types
-  aer_ppt=cowplot::plot_grid(a_nsd_w,a_dis_w,a_sp_w,a_are_w,nrow=1,rel_widths=c(0.65,0.65,0.65,0.65))
-  ggsave("~/Downloads/s_aerppt.png",aer_ppt,width=9,height=2,units="in")
-  
-  trap_ppt=cowplot::plot_grid(t_nsd_w,t_dis_w,t_sp_w,nrow=1,rel_widths=c(0.65,0.65,0.65))
-  ggsave("~/Downloads/s_trapppt.png",trap_ppt,width=9,height=2,units="in")
-  
-  tox_ppt=cowplot::plot_grid(x_nsd_w,x_dis_w,x_sp_w,x_are_w,nrow=1,rel_widths=c(0.65,0.65,0.65,0.5))
-  ggsave("~/Downloads/s_toxppt.png",tox_ppt,width=11,height=2,units="in")
-
-  #####Progress notes
-  
-  #1- tried making table in excel for figure/table combo discussed in meeting
-    #at 10pt font, table for mvmt parameters comes out to half a page, or ~4.5 in
-    #that leaves half a page width for the figures-- tried 4.5 width and does not work. too small, labels and dots get cut off.
   
   
