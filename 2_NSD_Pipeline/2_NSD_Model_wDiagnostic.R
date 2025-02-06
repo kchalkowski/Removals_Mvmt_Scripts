@@ -380,9 +380,9 @@ allc$sex[grep("sexMale",allc$effect)]<-"male"
 
 #get treatment type
 allc$trt=NA
-allc$trt[grep("aer",allc$effect)]<-"aer"
-allc$trt[grep("trap",allc$effect)]<-"trap"
-allc$trt[grep("tox",allc$effect)]<-"tox"
+allc$trt[grep("aer",allc$model)]<-"aer"
+allc$trt[grep("trap",allc$model)]<-"trap"
+allc$trt[grep("tox",allc$model)]<-"tox"
 
 #get response type
 allc$response="nsd"
