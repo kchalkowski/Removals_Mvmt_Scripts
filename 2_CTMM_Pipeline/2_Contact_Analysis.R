@@ -33,64 +33,25 @@ geo.trap<-readRDS(file.path(objdir,"geotrap.rds"))
 periods <- unique(geo.trap$removal.period.akdecalc)
 rem_typ <- c("ctrl","aer","tox","trap")
 rem_typ_folders <- rem_typ[-which(rem_typ=="ctrl")]
-cdist <- c(10,30,50)
-
-#identify controls in each folder 
-# akde_files<-list()
-# for(rem in rem_typ_folders){
-#   
-#   i<-which(rem_typ_folders==rem)
-#   
-#   dir_files <- list.files(paste0(objdir,"/AKDE_",rem))
-#   if(rem%in%dir_files){
-#     dir_files <- dir_files[-which(dir_files==rem)]
-#   }
-# 
-#   akde_files[[i]] <- data.frame(animalid=dir_files,
-#                            rem_typ=NA,
-#                            rem_typ_folder=rem)
-#   
-#   if(rem=="aer"){
-#     geo.gen <- geo.aer
-#   } else if(rem=="tox"){
-#     geo.gen <- geo.tox
-#   } else {
-#     geo.gen <- geo.trap
-#   }
-#   
-#   pigs_trt_temp <- geo.gen %>% 
-#     group_by(Removal.Type) %>% 
-#     reframe(animalid=unique(animalid))
-#   
-#   ctrl_pigs <- pigs_trt_temp %>% filter(Removal.Type=="ctrl")
-#   trmt_pigs <- pigs_trt_temp %>% filter(Removal.Type==rem)
-#   
-#   akde_files[[i]]$rem_typ[akde_files[[i]]$animalid%in%ctrl_pigs$animalid] <- "ctrl"
-#   akde_files[[i]]$rem_typ[akde_files[[i]]$animalid%in%trmt_pigs$animalid] <- "trt"
-#   
-# }
-# akde_files <- do.call("rbind.data.frame",akde_files)
-# 
-# #remove pigs that got filtered out/ not in AKDE folders
-# akde_files <- akde_files %>% filter(!is.na(rem_typ))
+cdist <- 10
 
 #all pairs within 95% MCP HR
 hr_pairs <- readRDS(paste0(objdir,"/pairs.rds"))
 hr_pairs$area <- round(as.numeric(hr_pairs$area),0)
 
 #filter out satellite animals
-
 sat_pigs <- georem %>% 
   group_by(animalid) %>% 
   summarise(data_from=unique(data_from)) %>% 
   filter(data_from=='satellite')
   
-# rem_idx<-1
+# rem_idx<-2
 # per_idx <- 1
+# w<-2
 # k<-1
 # l<-2
 # d<-1
-# w<-1
+
 
 #parallel function ----------
 contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS (3)
