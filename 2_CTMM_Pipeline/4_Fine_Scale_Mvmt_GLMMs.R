@@ -1227,10 +1227,6 @@ saveRDS(nind_tbl_s,file.path(results_dir,"Model_Output","nind_parm_gt_s.rds",fse
 
 # * Format model prediction df -----------------------------------------------
 for(i in 1:length(mods)){
-  #i=1
-  #i=8
-  #if(class(mods[[i]])=="glmmTMB"){
-  #coefs=summary(mods[[i]])$coef$cond
 
   if(length(grep("rps",models[i]))==0){
     #add if statement here and inside else-- if ncon or nind in model name, trt_ctrl is trt_ctrl
