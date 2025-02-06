@@ -243,7 +243,7 @@ perms
 cl <- makeCluster(nrow(perms))
 clusterExport(cl, list("periods","cdist",
                        "rem_typ_folders","perms",#"akde_files",
-                       "sat_pigs",
+                       "sat_pigs","died_tox",
                        "cpp_dir","objdir","homedir","ctmm_dir",
                        "hr_pairs",'contact_from_ctmm'))
 
@@ -322,3 +322,4 @@ ggplot(contacts_all)+
   facet_grid(dist~rem_typ)+
   guides(col="none")+
   theme(text=element_text(size=15))
+
