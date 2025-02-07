@@ -272,6 +272,7 @@ gnsf=st_as_sf(gns,coords=c("X","Y"),crs=st_crs(32614))
 gns %>% group_by(animalid) %>% summarise(mindt=min(date_only),maxdt=max(date_only))
 #85403_S7_S7 near aerial, but data ends 2/28
 #85396_2_L2_L2 near aerial, data ends 2/28
+
 #48464_E5_E5 overlaps, but must not have been overlap with 50% MCP core
 #85434_2_3K_3K didn't have enough points during aerial gunning to properly estimate MCP
 #48461_B4_B4 overlaps, but must have been no overlap with 50% MCP core
@@ -465,6 +466,7 @@ geo.aer=Do.Week.Split(geo.aer,"aer",c(aer.origin,aer.origin.after))
 geo.trap=Do.Week.Split(geo.trap,"trap",c(trap.origin,trap.origin.after,trap.origin.during))
 geo.tox=Do.Week.Split(geo.tox,"tox",c(tox.origin,tox.origin.after,tox.origin.during))
 
+
 #Trim pigs not meeting duration criteria within each period
 trap_id_filter=geo.trap %>% 
   group_by(animalid,removal.period.akdecalc,week) %>% 
@@ -477,10 +479,10 @@ trap_id_filter=geo.trap %>%
   dplyr::select(animalid) %>%
   as.data.frame()
 
-geo.trap=geo.trap[!(geo.trap$animalid%in%trap_id_filter),]
+geo.trap=geo.trap[!(geo.trap$animalid%in%trap_id_filter$animalid),]
+
 
 # Make vector of animalids that died during toxicant removals ------------------
-
 died.tox=geo.tox %>% 
   dplyr::group_by(animalid,removal.period.akdecalc) %>%
   dplyr::summarise(n_distinct(week)) %>%
@@ -488,6 +490,39 @@ died.tox=geo.tox %>%
   dplyr::filter(period<3) %>%
   dplyr::select(animalid) %>%
   as.data.frame()
+
+# Get summaries for downstream cutoffs -----------------------------------------
+#Area- 85411_C3_C3 and 86075_Y5_Y5 removed from geo.tox, range res reqs
+geo.tox[geo.tox$animalid!="85411_C3_C3"&geo.tox$animalid!="86075_Y5_Y5",] %>% 
+  dplyr::group_by(Removal.Type) %>% 
+  dplyr::summarise(n_distinct(animalid))
+
+#NSD:
+  #removed weeks that had < 5 days of geolocations
+
+#Speed:
+  #sat pigs removed
+
+#Distance, speed:
+  #sat pigs removed
+  #removed weeks that had < 5 days of geolocations
+
+#Ncon, Nind- sat pigs removed
+  #sat pigs removed
+  #48452_5A_5A ctrl removed from all sets for contact, did not overlap with any other pigs at least 1% of home range
+  #removed pigs that died of toxicant from toxicant set
+
+geo.aer[geo.aer$data_from!="satellite"&
+          geo.aer$animalid!="48452_5A_5A",] %>% 
+  dplyr::group_by(Removal.Type) %>% 
+  dplyr::summarise(n_distinct(animalid))
+
+geo.aer[geo.aer$data_from!="satellite"&
+          geo.aer$animalid!="48452_5A_5A",] %>% 
+  dplyr::group_by(Removal.Type) %>% 
+  dplyr::summarise(n())
+
+
 
 # Write out data and summaries -------------------------------------------------
 
