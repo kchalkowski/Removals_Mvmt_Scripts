@@ -512,13 +512,13 @@ geo.tox[geo.tox$animalid!="85411_C3_C3"&geo.tox$animalid!="86075_Y5_Y5",] %>%
   #48452_5A_5A ctrl removed from all sets for contact, did not overlap with any other pigs at least 1% of home range
   #removed pigs that died of toxicant from toxicant set
 
-geo.aer[geo.aer$data_from!="satellite"&
-          geo.aer$animalid!="48452_5A_5A",] %>% 
+geo.tox[geo.tox$data_from!="satellite"&
+          geo.tox$animalid!="48452_5A_5A",] %>% 
   dplyr::group_by(Removal.Type) %>% 
   dplyr::summarise(n_distinct(animalid))
 
-geo.aer[geo.aer$data_from!="satellite"&
-          geo.aer$animalid!="48452_5A_5A",] %>% 
+geo.tox[geo.tox$data_from!="satellite"&
+          geo.tox$animalid!="48452_5A_5A",] %>% 
   dplyr::group_by(Removal.Type) %>% 
   dplyr::summarise(n())
 

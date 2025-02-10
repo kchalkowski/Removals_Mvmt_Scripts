@@ -348,11 +348,13 @@ pdiffs5$sm[pdiffs5$sex=="whole"]<-"whole"
 pdiffs5$key=paste(pdiffs5$response,pdiffs5$rem,pdiffs5$sm,sep="_")
 preds$key=paste(preds$response,preds$rem,preds$sm,sep="_")
 
+#make keys (use for filtering in plot code)
+keys=unique(preds$key)
+
 # Plot results -----------------------------------------------------------------
 
 #preds for dot/whisker
 #pdiffs5 for charts showing differences
-#keys=unique(preds$key)
 #trt.keys=keys[grep("area_aer_sex",keys)]
 #trt.col=aer.hex
 #preds_ylab_list=""
@@ -839,10 +841,9 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   
 
   
-# Make function to do heatmap -----------------
+# Make heatmaps of predictions -----------------------------------
   
-  
-# Make coded pdiffs table -----------------
+## Make coded pdiffs table -----------------
   
   #calc treatment mag diffs
   pdiffs3$during_trt_ctrl<-pdiffs3$before_during_trt/pdiffs3$before_during_ctrl
@@ -919,7 +920,9 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   pdm[pdm$key=="nsd_trap_male_during"|pdm$key=="distance_trap_male_during",]$alpha=1
   pdm[pdm$key!="nsd_trap_male_during"&pdm$key!="distance_trap_male_during",]$alpha=0.1
   pdf=pd[pd$sex=="female",]
+  pdw=pd[pd$sex=="whole",]
   pda=rbind(pdf,pdm)
+  pda=rbind(pda,pdw)
   pda=pda[complete.cases(pda),]
 
   #join to get magnitude diffs
@@ -947,13 +950,25 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   
   pdjmv_f=pdjmv[pdjmv$sex=="female",]
   pdjmv_m=pdjmv[pdjmv$sex=="male",]
+  pdjmv_w=pdjmv[pdjmv$sex=="whole",]
+  
+  pdjco_f=pdjco[pdjco$sex=="female",]
+  pdjco_m=pdjco[pdjco$sex=="male",]
+  pdjco_w=pdjco[pdjco$sex=="whole",]
+  
+## Plot individual heatmaps -----------------------------------
 
+  #make max mag 20+ to keep scale of others observable
+  pdjmv_w$mag[pdjmv_w$mag==max(pdjmv_w$mag)]<-20 
+  pdjmv_w$mag[pdjmv_w$mag==max(pdjmv_w$mag)]<-20 
+  
+### Female movement heatmap ------------------------  
   heatmap_mvmt_f <- 
     ggplot(pdjmv_f,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
     geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
     geom_text(color = "black", size = 2.5) + # Add text labels
     scale_alpha(range=c(0,1))+
-    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-18,18),h1=6,c1=10,c2=10,c3=10) + 
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-20,20),h1=6,c1=10,c2=10,c3=10) + 
     theme_ipsum() + # Set theme
     labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
     theme(axis.text.x = element_text(angle = 45, hjust = 1))+
@@ -961,32 +976,29 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
     theme(legend.position="none",
           axis.text.x=element_blank(),
           axis.title.x=element_blank())
+
+### Male movement heatmap ------------------------  
   
   heatmap_mvmt_m <- 
     ggplot(pdjmv_m,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
     geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
     geom_text(color = "black", size = 2.5) + # Add text labels
-    scale_alpha(range=c(0,1))+
-    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-18,18),h1=6,c1=10,c2=10,c3=10) + 
+    scale_alpha(guide="none")+
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-20,20),h1=6,c1=10,c2=10,c3=10) + 
     theme_ipsum() + # Set theme
     labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
     theme(axis.text.x = element_text(angle = 45, hjust = 1))+
     facet_wrap(~rem)+
     theme(legend.position="bottom")
-  
-  heatmaps_mvmt=cowplot::plot_grid(heatmap_mvmt_f,NULL,heatmap_mvmt_m, ncol=1, rel_heights=c(0.5,-0.1,0.75))
-  ggsave(file.path(outdir,"HeatMaps","heatmap_mvmt.png"),heatmaps_mvmt,width=6.5,height=6.5,units="in")
-  
-  #Contact ones
-  pdjco_f=pdjco[pdjco$sex=="female",]
-  pdjco_m=pdjco[pdjco$sex=="male",]
-  
-  heatmap_con_f <- 
-    ggplot(pdjco_f,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
+
+### Whole movement heatmap ------------------------  
+
+  heatmap_mvmt_w <- 
+    ggplot(pdjmv_w,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
     geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
     geom_text(color = "black", size = 2.5) + # Add text labels
     scale_alpha(range=c(0,1))+
-    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-18,18),h1=6,c1=10,c2=10,c3=10) + 
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-20,20),h1=6,c1=10,c2=10,c3=10) + 
     theme_ipsum() + # Set theme
     labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
     theme(axis.text.x = element_text(angle = 45, hjust = 1))+
@@ -995,20 +1007,65 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
           axis.text.x=element_blank(),
           axis.title.x=element_blank())
   
+### Female contact heatmap ------------------------  
+  heatmap_con_f <- 
+    ggplot(pdjco_f,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
+    geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
+    geom_text(color = "black", size = 2.5) + # Add text labels
+    scale_alpha(range=c(0,1))+
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-2,2),h1=6,c1=10,c2=10,c3=10) + 
+    theme_ipsum() + # Set theme
+    labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+    facet_wrap(~rem)+
+    theme(legend.position="none",
+          axis.text.x=element_blank(),
+          axis.title.x=element_blank())
+  
+  
+### Male contact heatmap ------------------------
+  
   heatmap_con_m <- 
     ggplot(pdjco_m,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
     geom_tile(alpha=0,color = "white",show.legend=TRUE) + # Create heatmap
     geom_text(color = "black", size = 2.5) + # Add text labels
-    #scale_alpha(range=c(0,1))+
-    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-18,18),h1=6,c1=10,c2=10,c3=10) + 
+    scale_alpha(guide="none")+ #none significant here
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-2,2),h1=6,c1=10,c2=10,c3=10) + 
     theme_ipsum() + # Set theme
     labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
     theme(axis.text.x = element_text(angle = 45, hjust = 1))+
     facet_wrap(~rem)+
     theme(legend.position="bottom")
   
-  heatmaps_con=cowplot::plot_grid(heatmap_con_f,NULL,heatmap_con_m, ncol=1, rel_heights=c(0.5,-0.1,0.75))
-  ggsave(file.path(outdir,"HeatMaps","heatmap_contact.png"),heatmaps_con,width=6.5,height=6.5,units="in")
+  
+### Whole contact heatmap ------------------------  
+  
+  heatmap_con_w <- 
+    ggplot(pdjco_w,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
+    geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
+    geom_text(color = "black", size = 2.5) + # Add text labels
+    scale_alpha(range=c(0,1))+
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-2,2),h1=6,c1=10,c2=10,c3=10) + 
+    theme_ipsum() + # Set theme
+    labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+    facet_wrap(~rem)+
+    theme(legend.position="none",
+          axis.text.x=element_blank(),
+          axis.title.x=element_blank())
+  
+  
+## Group heatmaps with cowplot and save to file -----------------------------------
+  
+### Movement heatmaps ------------------------------------  
+  heatmaps_mvmt=cowplot::plot_grid(heatmap_mvmt_w,NULL,heatmap_mvmt_f,NULL,heatmap_mvmt_m, ncol=1, rel_heights=c(0.5,-0.1,0.5,-0.1,0.75))
+  ggsave(file.path(outdir,"HeatMaps","heatmap_mvmt.png"),heatmaps_mvmt,width=6.5,height=9,units="in")
+
+
+### contact heatmaps ------------------------------------  
+  
+  heatmaps_con=cowplot::plot_grid(heatmap_con_w,NULL,heatmap_con_f,NULL,heatmap_con_m, ncol=1, rel_heights=c(0.5,-0.1,0.5,-0.1,0.75))
+  ggsave(file.path(outdir,"HeatMaps","heatmap_contact.png"),heatmaps_con,width=6.5,height=9,units="in")
   
   
   
