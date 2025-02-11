@@ -4,8 +4,8 @@
 
 # Overview -------------------------
 #1. subsampling analysis
-#2. toxicant fate analysis
-#3. leave one out analysis
+#2. leave one out analysis
+#3. toxicant fate analysis
 
 # Setup -------------------------
 home<-"/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline"
@@ -347,7 +347,7 @@ LeaveOneOut<-function(data,call){
 
 
 ## Tox, NSD, after ---------------------------------
-#geo.toxd.wk=readRDS(file.path(objdir,"NSDgeotox.rds",fsep=.Platform$file.sep))
+geo.toxd.wk=readRDS(file.path(objdir,"NSDgeotox.rds",fsep=.Platform$file.sep))
 
 #Formatting needed to run model
 colnames(geo.toxd.wk)[c(2,3)]<-c("trt_ctrl","period")
@@ -382,7 +382,7 @@ intxn$sex<-factor(intxn$sex,levels=c("Ref","Female","Male"))
 intxn$trt_ctrl<-factor(intxn$trt_ctrl,levels=c("Ref","ctrl","trt"))
 
 #Plot showing whether interpretation changes-- 
-ggplot(intxn,aes(y=minusID,x=estimate))+
+Tox_NSD_l1o=ggplot(intxn,aes(y=minusID,x=estimate))+
   geom_point(aes(color=trt_ctrl,
                  shape=sex),
              size=3)+
@@ -393,10 +393,11 @@ ggplot(intxn,aes(y=minusID,x=estimate))+
   geom_vline(xintercept=0,linetype="dashed",color="red")+
   theme_ipsum()+
   theme(axis.text.y=element_blank())+
-  ylab("Individual removed")
-  xlab("Parameter estimate, Removal type: tox * Period: after")
-#ggsave("/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Output/SA_Results/L1O_Area_Tox.png",width=5,height=8,units="in")
-
+  ylab("Individual removed")+
+  xlab("Parameter estimate, Treatment * Period: after")
+  
+  #Tox_NSD_l1o
+  
 ## Trap, distance, after ---------------------------------
   dist<- readRDS(paste0(objdir,"/pig_weekly_distance_ctmm.rds"))
   
@@ -435,9 +436,8 @@ ggplot(intxn,aes(y=minusID,x=estimate))+
   intxn$sex<-factor(intxn$sex,levels=c("Ref","Female","Male"))
   intxn$trt_ctrl<-factor(intxn$trt_ctrl,levels=c("Ref","ctrl","trt"))
   
-  #Plot showing whether interpretation changes-- 
-  intxn=intxn[order(intxn$trt_ctrl),]
-  ggplot(intxn,aes(y=minusID,x=estimate))+
+#Plot showing whether interpretation changes-- 
+Trap_dist_l1o=ggplot(intxn,aes(y=minusID,x=estimate))+
     geom_point(aes(color=trt_ctrl,
                    shape=sex),
                size=3)+
@@ -448,11 +448,232 @@ ggplot(intxn,aes(y=minusID,x=estimate))+
     geom_vline(xintercept=0,linetype="dashed",color="red")+
     theme_ipsum()+
     theme(axis.text.y=element_blank())+
-    ylab("Individual removed")
-  xlab("Parameter estimate, Removal type: tox * Period: after")
-  #ggsave("/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Output/SA_Results/L1O_Area_Tox.png",width=5,height=8,units="in")
+    ylab("Individual removed")+
+  xlab("Parameter estimate, Treatment * Period: after")
+#Trap_dist_l1o
+
+# Toxicant fate analysis -------------------------
+
+#does including pigs that died of toxicant exposure in full analysis skew interpretations
+#Analyze toxicant before/during and before/after effects with and without died tox pigs  
+  #NSD, after 
+  #distance, during
+  #area, after
+
+#get data frame with fate
+fatedied=geo.toxd.wk %>% 
+    dplyr::group_by(animalid,trt_ctrl) %>%
+    dplyr::summarise(nump=n_distinct(period)) %>%
+    dplyr::filter(nump==1)
+fatedied=fatedied$animalid
   
+## Make toxicant fate analysis function -------------------------
+  
+  TestToxFate<-function(data,call){
+    
+    #evaluate model with full dataset
+    print("running full model")
+    res=eval(call)
+    
+    #tidy output
+    parms=broom.mixed::tidy(res)
+    
+    #add minusID col
+    parms$subset="full"
+    
+    #rename data to reuse call for removals
+    dat=data
+    
+    data=dat[dat$fate!="died",]
+    res=eval(call)
+      
+    parms.i=broom.mixed::tidy(res)
+    parms.i$subset="survivors"
+    
+    parms=rbind(parms,parms.i)
+      
+    return(parms)
+    
+  }
+  
+## NSD  -------------------------------------------
+geo.toxd.wk=readRDS(file.path(objdir,"NSDgeotox.rds",fsep=.Platform$file.sep))
+
+#Formatting needed to run model
+colnames(geo.toxd.wk)[c(2,3)]<-c("trt_ctrl","period")
+geo.toxd.wk$trt_ctrl<-as.character(geo.toxd.wk$trt_ctrl)
+geo.toxd.wk$trt_ctrl[geo.toxd.wk$trt_ctrl!="ctrl"]<-"trt"
+geo.toxd.wk$trt_ctrl<-as.factor(geo.toxd.wk$trt_ctrl)
+geo.toxd.wk$trt_ctrl<-forcats::fct_relevel(geo.toxd.wk$trt_ctrl,"ctrl","trt")
+
+geo.toxd.wk$fate="survived"
+geo.toxd.wk[geo.toxd.wk$animalid%in%fatedied,]$fate<-"died"
+
+#Run model to get call for function
+data=geo.toxd.wk
+res=glmmTMB(mNSD ~ trt_ctrl*period, data=data,family=Gamma(link=log))
+call=res$call  
+
+#Run function
+parmnsd=TestToxFate(data,call)
+
+#relevel
+parmnsd$subset<-forcats::fct_relevel(parmnsd$subset,c("full","survivors"))
+ggplot(parmnsd,aes(y=subset,x=estimate,color=term))+
+  geom_point(size=3)+
+  geom_segment(aes(x=(estimate-2*std.error),
+                   xend=(estimate+2*std.error)))+
+  #scale_color_manual(values=c("black","grey"))+
+  geom_vline(xintercept=0,linetype="dashed",color="red")+
+  theme_ipsum()+
+  ylab("Individual removed")
+
+## distance  -------------------------------------------
+dist<- readRDS(paste0(objdir,"/pig_weekly_distance_ctmm.rds"))
+
+#Formatting needed to run model
+colnames(dist)[4]<-"period"
+dist<-dist[dist$Removal.Type=="tox",]
+
+#relevel factors
+dist$period<-factor(dist$period,levels=c("before","during","after"))
+dist$trt_ctrl<-factor(dist$trt_ctrl,levels=c("ctrl","trt"))
+
+#Run model to get call for function
+dist$fate="survived"
+dist[dist$animalid%in%fatedied,]$fate<-"died"
+
+data=dist
+res=glmmTMB(weekly_dist_km~(1|animalid)+trt_ctrl*period,
+            data=data,family=Gamma(link="log"))
+call=res$call
+
+#Run function
+parmdt=TestToxFate(data,call)
+
+#remove random effects
+parmdt=parmdt[is.na(parmdt$group),]
+
+#relevel
+parmdt$subset<-forcats::fct_relevel(parmdt$subset,c("full","survivors"))
+
+#make plot
+ggplot(parmdt,aes(y=subset,x=estimate,color=term))+
+  geom_point(size=3)+
+  geom_segment(aes(x=(estimate-2*std.error),
+                   xend=(estimate+2*std.error)))+
+  geom_vline(xintercept=0,linetype="dashed",color="red")+
+  theme_ipsum()+
+  ylab("Individual removed")
+
+## speed  -------------------------------------------
+speed<- readRDS(paste0(objdir,"/pig_weekly_speed_ctmm.rds"))
+colnames(speed)[4]<-"period"
+
+#add fate
+speed$fate="survived"
+speed[speed$animalid%in%fatedied,]$fate<-"died"
+
+#relevel factors
+speed$period<-factor(speed$period,levels=c("before","during","after"))
+speed$trt_ctrl<-factor(speed$trt_ctrl,levels=c("ctrl","trt"))
+
+#Run model to get call for function
+data=speed
+res=glmmTMB(weekly_md_km_hr~(1|animalid)+trt_ctrl*period,
+            data=data,family=Gamma(link="log"))
+call=res$call
+
+#Run function
+parmsp=TestToxFate(data,call)
+
+#remove random effects
+parmsp=parmsp[is.na(parmsp$group),]
+
+#relevel
+parmsp$subset<-forcats::fct_relevel(parmsp$subset,c("full","survivors"))
+
+#make plot
+ggplot(parmsp,aes(y=subset,x=estimate,color=term))+
+  geom_point(size=3)+
+  geom_segment(aes(x=(estimate-2*std.error),
+                   xend=(estimate+2*std.error)))+
+  geom_vline(xintercept=0,linetype="dashed",color="red")+
+  theme_ipsum()+
+  ylab("Individual removed")
 
 
-  
-  
+## area  -------------------------------------------
+aktox=readRDS(file.path(objdir,"outdf_akde_aktox_corrected_f.rds",fsep=.Platform$file.sep))
+
+#add fate
+aktox$fate="survived"
+aktox[aktox$animalid%in%fatedied,]$fate<-"died"
+
+#other formatting
+colnames(aktox)[19]<-"trt_ctrl"
+aktox$trt_ctrl<-as.character(aktox$trt_ctrl)
+aktox$trt_ctrl[aktox$trt_ctrl!="ctrl"]<-"trt"
+
+#relevel factors
+aktox$period<-factor(aktox$period,levels=c("before","after"))
+aktox$trt_ctrl<-factor(aktox$trt_ctrl,levels=c("ctrl","trt"))
+
+#Run model to get call for function
+data=aktox
+res=glmmTMB(area.est ~ trt_ctrl*period + (1|animalid), 
+            data=data,family=Gamma(link=log))
+
+call=res$call
+
+#Run function
+parmar=TestToxFate(data,call)
+
+#remove random effects
+parmar=parmar[is.na(parmar$group),]
+
+#relevel
+parmar$subset<-forcats::fct_relevel(parmar$subset,c("full","survivors"))
+
+#make plot
+ggplot(parmar,aes(y=subset,x=estimate,color=term))+
+  geom_point(size=3)+
+  geom_segment(aes(x=(estimate-2*std.error),
+                   xend=(estimate+2*std.error)))+
+  geom_vline(xintercept=0,linetype="dashed",color="red")+
+  theme_ipsum()+ylab("Individual removed")
+
+## Combine parm tables  -------------------------------------------
+
+parmnsd$response="nsd"
+parmdt$response="distance"
+parmsp$response="speed"
+parmar$response="area"
+
+ap=dplyr::bind_rows(parmnsd,parmdt,parmsp,parmar)
+
+## Make plot  -------------------------------------------
+ap=ap[ap$term!="(Intercept)",]
+toxfate_plot=ggplot(ap,aes(y=subset,x=estimate,color=term))+
+  geom_point(size=3)+
+  geom_segment(aes(x=(estimate-2*std.error),
+                   xend=(estimate+2*std.error)))+
+  geom_vline(xintercept=0,linetype="dashed",color="red")+
+  theme_ipsum()+ylab("Individual removed")+
+  facet_wrap(~response,ncol=1)
+
+## Output plots  -------------------------------------------
+
+plotdir<-file.path(outdir,"SA_Results")
+
+#leave one out plots
+#Tox_NSD_l1o
+ggsave(file.path(plotdir,"tox_nsd_l1o.png"),Tox_NSD_l1o)
+#Trap_dist_l1o
+ggsave(file.path(plotdir,"trap_dist_l1o.png"),Trap_dist_l1o)
+
+#toxfate plot
+ggsave(file.path(plotdir,"toxfate.png"),toxfate_plot)
+
+
+
