@@ -601,7 +601,6 @@ saveRDS(res_ncon_rps_aer,paste0(results_dir,"/res_ncon_rps_aer.rds"))
 ##trap ------
 contrap <- readRDS(paste0(objdir,"/pairwise_contacts_trap.rds"))
 colnames(contrap)[c(3,2)]<-c("period","trt_ctrl")
-<<<<<<< HEAD
 
 contrap$trt_ctrl <- 
   factor(contrap$trt_ctrl,levels=c('ctrl','trt'))
@@ -612,8 +611,6 @@ contrap$period <-
 ggplot(contrap)+
   geom_histogram(aes(x=contacts_per_day))+
   facet_wrap(.~dist)
-=======
->>>>>>> 69e5648f628fe0c2a4738430a43a78ff7c69cc29
 
 contrap <- contrap %>% filter(dist==10)
 
@@ -714,7 +711,6 @@ saveRDS(res_ncon_rps_trap,paste0(results_dir,"/res_ncon_rps_trap.rds"))
 ##tox ------
 contox <- readRDS(paste0(objdir,"/pairwise_contacts_tox.rds"))
 colnames(contox)[c(3,2)]<-c("period","trt_ctrl")
-<<<<<<< HEAD
 
 contox$trt_ctrl <- 
   factor(contox$trt_ctrl,levels=c('ctrl','trt'))
@@ -725,8 +721,6 @@ contox$period <-
 ggplot(contox)+
   geom_histogram(aes(x=contacts_per_day))+
   facet_wrap(.~dist)
-=======
->>>>>>> 69e5648f628fe0c2a4738430a43a78ff7c69cc29
 
 contox <- contox %>% filter(dist==10)
 
@@ -1075,31 +1069,7 @@ testSpatialAutocorrelation(tox_res_nind_rps2,
 #spatial autocorrelation p=0.0004
 
 #correcting for spatial autocorrelation
-<<<<<<< HEAD
- #spatial_res <- 100
- #mesh_cutoff=1
- #contox$mX_sc <- floor(contox$mX/spatial_res)
- #contox$mY_sc <- floor(contox$mY/spatial_res)
- #meshtox_con <- make_mesh(contox,c("mX_sc","mY_sc"),cutoff=mesh_cutoff)
-#res_nind_rps_tox = sdmTMB(indivs_per_day_offset~
-#                              (1|animalid)+
-#                              trt_ctrl*period*sex,
-#                            data=contox,
-#                            family=Gamma(link="log"),
-#                            mesh=meshtox_con,
-#                            spatial="on")
 
-#sanity(res_nind_rps_tox)
-#tox_res_nind_rps <- simulate(res_nind_rps_tox,
-#                               nsim = 544,type = 'mle-mvn') %>%
-#  dharma_residuals(res_nind_rps_tox, return_DHARMa = TRUE)
-#tox_res_nind_rps2 = recalculateResiduals(tox_res_nind_rps,
-#                                           group = as.factor(contox$animalid),
-#                                           rotation="estimated")
-#testSpatialAutocorrelation(tox_res_nind_rps2,
-#                           tox_groupLocations_con$mX,
-#                           tox_groupLocations_con$mY)
-=======
 spatial_res <- 1000
 mesh_cutoff=1
 contox$mX_sc <- floor(contox$mX/spatial_res)
@@ -1125,7 +1095,6 @@ testSpatialAutocorrelation(tox_res_nind_rps2,
                            tox_groupLocations_con$mX,
                            tox_groupLocations_con$mY)
 #no spatial autocorrelation p=0.42
->>>>>>> 69e5648f628fe0c2a4738430a43a78ff7c69cc29
 
 saveRDS(res_nind_rps_tox,paste0(results_dir,"/res_nind_rps_tox.rds"))
 
@@ -1137,13 +1106,7 @@ ci_model_list=list(res_nind_rp_aer,
                   res_nind_rps_tox)
 
 
-<<<<<<< HEAD
-=======
-saveRDS(conaer,paste0(results_dir,"/conaer.rds"))
-saveRDS(contox,paste0(results_dir,"/contox.rds"))
-saveRDS(contrap,paste0(results_dir,"/contrap.rds"))
 
->>>>>>> 69e5648f628fe0c2a4738430a43a78ff7c69cc29
 # Format model info -----------------------------------------------------------
 mods<-list(res_distance_rp_aer,
            res_distance_rps_aer,
