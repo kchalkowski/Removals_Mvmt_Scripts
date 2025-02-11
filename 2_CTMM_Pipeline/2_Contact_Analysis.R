@@ -44,6 +44,9 @@ sat_pigs <- georem %>%
   group_by(animalid) %>% 
   summarise(data_from=unique(data_from)) %>% 
   filter(data_from=='satellite')
+
+#pigs that died from toxicant 
+died_tox <- readRDS(paste0(objdir,"/diedtox.rds"))
   
 # rem_idx<-2
 # per_idx <- 1
@@ -133,7 +136,8 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
                                     "/",main_pig_id,
                                     "/",main_pig_id,
                                     "_",periods[per_idx],"_one_min_pred.rds")) & #file exists
-                 !(main_pig_id%in%sat_pigs) #data not from satellite
+                 !(main_pig_id%in%sat_pigs) &#data not from satellite
+                 !(main_pig_id%in%died_tox$animalid) #pigs survived toxicant
                  ){
                 
                 main_pig_telem <- readRDS(paste0(ctmm_dir,
@@ -164,7 +168,8 @@ contact_from_ctmm <- function(rem_idx,per_idx){ # parallel over rem type FOLDERS
                                         "/",pair_pig_id,
                                         "/",pair_pig_id,
                                         "_",periods[per_idx],"_one_min_pred.rds")) & #file exists
-                     !(pair_pig_id%in%sat_pigs) #data not from satellite
+                     !(pair_pig_id%in%sat_pigs) & #data not from satellite
+                     !(pair_pig_id%in%died_tox$animalid) #pigs survived toxicant
                   ){
                     
                     pair_pig_telem <- readRDS(paste0(ctmm_dir,
@@ -238,7 +243,7 @@ perms
 cl <- makeCluster(nrow(perms))
 clusterExport(cl, list("periods","cdist",
                        "rem_typ_folders","perms",#"akde_files",
-                       "sat_pigs",
+                       "sat_pigs","died_tox",
                        "cpp_dir","objdir","homedir","ctmm_dir",
                        "hr_pairs",'contact_from_ctmm'))
 
@@ -317,3 +322,4 @@ ggplot(contacts_all)+
   facet_grid(dist~rem_typ)+
   guides(col="none")+
   theme(text=element_text(size=15))
+
