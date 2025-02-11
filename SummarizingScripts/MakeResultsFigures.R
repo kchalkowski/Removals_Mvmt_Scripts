@@ -639,7 +639,6 @@ ggsave("~/Downloads/barchart_mvmt_sex.png",mvmt_sex,width=9,height=5,units="in")
 ## Contact Bar charts -----------------------------------------------------------------
 
 #adjust preds for contact
-#preds[(preds$response=="ncon"|preds$response=="nind")&(preds$rem=="tox"),]$conf.high=preds[(preds$response=="ncon"|preds$response=="nind")&(preds$rem=="tox"),]$predicted
 
 #separate scales for contact ones
 
@@ -649,9 +648,9 @@ t_nc_w=MakeBarchart(keys[grep("ncon_trap_whole",keys)],trap.hex,"N. contacts","R
 x_nc_w=MakeBarchart(keys[grep("ncon_tox_whole",keys)],tox.hex,"N. contacts","Removal Period",FALSE,FALSE,FALSE,FALSE,4,1,10,"whole",TRUE)
 
 # speed
-a_ni_w=MakeBarchart(keys[grep("nind_aer_whole",keys)],aer.hex,"N. unique contact","Removal Period",FALSE,FALSE,FALSE,TRUE,4,1,10,"whole",TRUE)
-t_ni_w=MakeBarchart(keys[grep("nind_trap_whole",keys)],trap.hex,"N. unique contact","Removal Period",FALSE,FALSE,FALSE,FALSE,4,1,10,"whole",TRUE)
-x_ni_w=MakeBarchart(keys[grep("nind_tox_whole",keys)],tox.hex,"N. unique contact","Removal Period",FALSE,FALSE,FALSE,FALSE,4,1,10,"whole",TRUE)
+a_ni_w=MakeBarchart(keys[grep("nind_aer_whole",keys)],aer.hex,"N. unique contact","Removal Period",TRUE,FALSE,FALSE,TRUE,4,1,10,"whole",TRUE)
+t_ni_w=MakeBarchart(keys[grep("nind_trap_whole",keys)],trap.hex,"N. unique contact","Removal Period",TRUE,FALSE,FALSE,FALSE,4,1,10,"whole",TRUE)
+x_ni_w=MakeBarchart(keys[grep("nind_tox_whole",keys)],tox.hex,"N. unique contact","Removal Period",TRUE,FALSE,FALSE,FALSE,4,1,10,"whole",TRUE)
 
 #combine removal types
 nc_pg=cowplot::plot_grid(a_nc_w,t_nc_w,x_nc_w,nrow=1,rel_widths=c(0.65,0.65,0.65))
@@ -919,6 +918,11 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   pdm=pd[pd$sex=="male",]
   pdm[pdm$key=="nsd_trap_male_during"|pdm$key=="distance_trap_male_during",]$alpha=1
   pdm[pdm$key!="nsd_trap_male_during"&pdm$key!="distance_trap_male_during",]$alpha=0.1
+  pdm[pdm$key=="ncon_trap_male_during"|
+        pdm$key=="ncon_trap_male_after"|
+        pdm$key=="nind_trap_male_after"|
+        pdm$key=="ncon_tox_male_after",]$alpha=1
+  
   pdf=pd[pd$sex=="female",]
   pdw=pd[pd$sex=="whole",]
   pda=rbind(pdf,pdm)
@@ -944,9 +948,16 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   #clean digits
   pdj$pred<-round(pdj$pred,digits=2)
   
+  #relevel
+  pdj$rem<-factor(pdj$rem,levels=c("aer","trap","tox"))
+  
   #remove contact ones, plot separately
   pdjmv=pdj[pdj$response!="nind"&pdj$response!="ncon",]
   pdjco=pdj[pdj$response=="nind"|pdj$response=="ncon",]
+  
+  #relevel contact responses
+  pdjco$response<-factor(pdjco$response,levels=c("ncon","nind"))
+  
   
   pdjmv_f=pdjmv[pdjmv$sex=="female",]
   pdjmv_m=pdjmv[pdjmv$sex=="male",]
@@ -955,6 +966,7 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   pdjco_f=pdjco[pdjco$sex=="female",]
   pdjco_m=pdjco[pdjco$sex=="male",]
   pdjco_w=pdjco[pdjco$sex=="whole",]
+  
   
 ## Plot individual heatmaps -----------------------------------
 
@@ -983,7 +995,7 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
     ggplot(pdjmv_m,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
     geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
     geom_text(color = "black", size = 2.5) + # Add text labels
-    scale_alpha(guide="none")+
+    scale_alpha(range=c(0,1),guide="none")+
     scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-20,20),h1=6,c1=10,c2=10,c3=10) + 
     theme_ipsum() + # Set theme
     labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
@@ -1008,12 +1020,13 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
           axis.title.x=element_blank())
   
 ### Female contact heatmap ------------------------  
+  
   heatmap_con_f <- 
     ggplot(pdjco_f,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
     geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
     geom_text(color = "black", size = 2.5) + # Add text labels
     scale_alpha(range=c(0,1))+
-    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-2,2),h1=6,c1=10,c2=10,c3=10) + 
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-20,20),h1=6,c1=10,c2=10,c3=10) + 
     theme_ipsum() + # Set theme
     labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
     theme(axis.text.x = element_text(angle = 45, hjust = 1))+
@@ -1024,13 +1037,15 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
   
   
 ### Male contact heatmap ------------------------
+  pdjco_m$mag[pdjco_m$mag==min(pdjco_m$mag)]=-20
+  pdjco_m$mag[pdjco_m$mag==min(pdjco_m$mag)]=-20
   
   heatmap_con_m <- 
     ggplot(pdjco_m,aes(x = period, y = response, fill = mag, label = formatC(pred, format = "e",digits=2))) +
-    geom_tile(alpha=0,color = "white",show.legend=TRUE) + # Create heatmap
+    geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
     geom_text(color = "black", size = 2.5) + # Add text labels
-    scale_alpha(guide="none")+ #none significant here
-    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-2,2),h1=6,c1=10,c2=10,c3=10) + 
+    scale_alpha(range=c(0,1),guide="none")+ #none significant here
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-20,20),h1=6,c1=10,c2=10,c3=10) + 
     theme_ipsum() + # Set theme
     labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
     theme(axis.text.x = element_text(angle = 45, hjust = 1))+
@@ -1045,7 +1060,7 @@ ggsave("~/Downloads/allp.png",allp,width=9,height=6.5,units="in")
     geom_tile(aes(alpha=alpha),color = "white",show.legend=TRUE) + # Create heatmap
     geom_text(color = "black", size = 2.5) + # Add text labels
     scale_alpha(range=c(0,1))+
-    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-2,2),h1=6,c1=10,c2=10,c3=10) + 
+    scale_fill_continuous_divergingx(palette = 'RdBu', mid = 1,limits=c(-20,20),h1=6,c1=10,c2=10,c3=10) + 
     theme_ipsum() + # Set theme
     labs(x = "Removal Period", y = "Movement Response",fill="mag. diff.") + # Labels
     theme(axis.text.x = element_text(angle = 45, hjust = 1))+

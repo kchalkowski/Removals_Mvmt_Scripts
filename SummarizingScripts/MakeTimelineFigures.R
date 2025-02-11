@@ -214,11 +214,7 @@ trap4[!complete.cases(trap4)&
              !(trap4$animalid%in%trap_gone),]
 
 #48452_5A_5A missing-- also from aer
-#Have Abbey check into this
-#Guessing maybe the CTMM model wasn't well fit or something, couldn't make predictions, failed without warning?
-View(tox4[!complete.cases(tox4)&
-            !(tox4$animalid%in%satpigs)&
-            !(tox4$animalid%in%tox_gone),])
+#Abbey checked this-- wasn't near any other pigs
 
 #Add removal type columns
 aer4$rem<-"aer"
