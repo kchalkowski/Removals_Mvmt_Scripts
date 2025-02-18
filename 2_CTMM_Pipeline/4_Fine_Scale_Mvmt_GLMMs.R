@@ -1360,7 +1360,7 @@ saveRDS(speed_tbl_s,file.path(results_dir,"Model_Output","speed_parm_gt_s.rds",f
 
 ### ncon gt summary tables----------------------
 aer_tbl <- make_sdmTMB_gt(res_ncon_rp_aer,conaer)
-trap_tbl <- tbl_regression(res_ncon_rp_trap, exponentiate = TRUE)
+trap_tbl <- make_sdmTMB_gt(res_ncon_rp_trap, contrap)
 tox_tbl <- tbl_regression(res_ncon_rp_tox, exponentiate = TRUE)
 
 ncon_tbl=tbl_merge(
@@ -1595,3 +1595,4 @@ if(!dir.exists(file.path(results_dir,"Model_Output"))){dir.create(file.path(outd
 saveRDS(preds,file.path(results_dir,"Model_Output","spdist_preds.rds"))
 saveRDS(allc,file.path(results_dir,"Model_Output","spdist_intxns.rds"))
 saveRDS(parms,file.path(results_dir,"Model_Output","spdist_full_param.rds"))
+
