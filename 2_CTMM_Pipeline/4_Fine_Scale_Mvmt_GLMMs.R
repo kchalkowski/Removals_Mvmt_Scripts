@@ -1205,15 +1205,16 @@ ncon_tbl=tbl_merge(
 
 saveRDS(ncon_tbl,file.path(results_dir,"Model_Output","ncon_parm_gt.rds",fsep=.Platform$file.sep))
 
-aer_tbl_s <- make_sdmTMB_gt(res_ncon_rps_aer, conaer)
+# aer_tbl_s <- make_sdmTMB_gt(res_ncon_rps_aer, conaer)
 trap_tbl_s <- tbl_regression(res_ncon_rps_trap, exponentiate = TRUE)
 tox_tbl_s <- tbl_regression(res_ncon_rps_trap, exponentiate = TRUE)
 
 ncon_tbl_s=tbl_merge(
-  tbls = list(aer_tbl,
-              tox_tbl, 
-              trap_tbl),
-  tab_spanner = c("aerial","tox","trap")
+  tbls = list(#aer_tbl,
+              tox_tbl_s, 
+              trap_tbl_s),
+  tab_spanner = c(#"aerial",
+                  "tox","trap")
 ) 
 
 saveRDS(ncon_tbl_s,file.path(results_dir,"Model_Output","ncon_parm_gt_s.rds",fsep=.Platform$file.sep))
@@ -1420,7 +1421,7 @@ for(i in 1:length(mods)){
   
 }
 
-range(parms$p.value)
+
 # * Save tidied model output ----------------
 #outdir=file.path(homedir,"3_Output",fsep=.Platform$file.sep)
 if(!dir.exists(file.path(results_dir,"Model_Output"))){dir.create(file.path(outdir,"Model_Output"))}
