@@ -1115,7 +1115,7 @@ cn_models=c("res_ncon_rp_tox",
                 "res_ncon_rps_tox",
                 "res_ncon_rps_trap",
                 "res_ncon_rp_trap",
-                # "res_ncon_rps_aer",
+                # "res_ncon_rps_aer", #taking out of running, wouldnt converge w spat autocorr
                 "res_ncon_rp_aer")
 
 ci_mods=ci_model_list
@@ -1133,7 +1133,7 @@ models=c(models,cn_models,ci_models)
 ##  Make gt summary tables----------------------
 
 #source funcs to make gt tables for sdmTMB models
-source(file.path("Functions","Table_Convert_Funcs.R",fsep=.Platform$file.sep))
+source(file.path(homedir,"2_Scripts","Functions","Table_Convert_Funcs.R",fsep=.Platform$file.sep))
 
 ### distance gt summary tables----------------------
 aer_tbl<-make_sdmTMB_gt(res_distance_rp_aer,distaer)
@@ -1197,23 +1197,22 @@ trap_tbl <- tbl_regression(res_ncon_rp_trap, exponentiate = TRUE)
 tox_tbl <- tbl_regression(res_ncon_rp_tox, exponentiate = TRUE)
 
 ncon_tbl=tbl_merge(
-  tbls = list(aer_tbl,
-              tox_tbl, 
-              trap_tbl),
-  tab_spanner = c("aerial","tox","trap")
+  tbls = list(tox_tbl,
+              trap_tbl, 
+              aer_tbl),
+  tab_spanner = c("tox","trap","aer")
 ) 
 
 saveRDS(ncon_tbl,file.path(results_dir,"Model_Output","ncon_parm_gt.rds",fsep=.Platform$file.sep))
 
-aer_tbl_s <- make_sdmTMB_gt(res_ncon_rps_aer, conaer)
+#aer_tbl_s <- make_sdmTMB_gt(res_ncon_rps_aer, conaer)
 trap_tbl_s <- tbl_regression(res_ncon_rps_trap, exponentiate = TRUE)
 tox_tbl_s <- tbl_regression(res_ncon_rps_trap, exponentiate = TRUE)
 
 ncon_tbl_s=tbl_merge(
-  tbls = list(aer_tbl,
-              tox_tbl, 
+  tbls = list(tox_tbl, 
               trap_tbl),
-  tab_spanner = c("aerial","tox","trap")
+  tab_spanner = c("tox","trap")
 ) 
 
 saveRDS(ncon_tbl_s,file.path(results_dir,"Model_Output","ncon_parm_gt_s.rds",fsep=.Platform$file.sep))
@@ -1224,24 +1223,24 @@ trap_tbl <- make_sdmTMB_gt(res_nind_rp_trap, contrap)
 tox_tbl <- make_sdmTMB_gt(res_nind_rp_tox, contox)
 
 nind_tbl=tbl_merge(
-  tbls = list(aer_tbl,
-              tox_tbl, 
-              trap_tbl),
-  tab_spanner = c("aerial","tox","trap")
+  tbls = list(tox_tbl, 
+              trap_tbl,
+              aer_tbl),
+  tab_spanner = c("tox","trap","aer")
 ) 
 
 saveRDS(nind_tbl,file.path(results_dir,"Model_Output","nind_parm_gt.rds",fsep=.Platform$file.sep))
 
 
-aer_tbl_s <- tbl_regression(res_nind_rps_aer, exponentiate = TRUE)
+aer_tbl_s <- make_sdmTMB_gt(res_nind_rps_aer, conaer)
 trap_tbl_s <- tbl_regression(res_nind_rps_trap, exponentiate = TRUE)
 tox_tbl_s <- make_sdmTMB_gt(res_nind_rps_tox, contox)
 
 nind_tbl_s=tbl_merge(
-  tbls = list(aer_tbl_s, 
-              tox_tbl_s,
-              trap_tbl_s),
-  tab_spanner = c("aerial","tox","trap")
+  tbls = list(tox_tbl_s,
+              trap_tbl_s,
+              aer_tbl_s),
+  tab_spanner = c("tox","trap","aer")
 ) 
 
 saveRDS(nind_tbl_s,file.path(results_dir,"Model_Output","nind_parm_gt_s.rds",fsep=.Platform$file.sep))
@@ -1420,7 +1419,9 @@ for(i in 1:length(mods)){
   
 }
 
+#check to make sure p vals calc'd correctly
 range(parms$p.value)
+
 # * Save tidied model output ----------------
 #outdir=file.path(homedir,"3_Output",fsep=.Platform$file.sep)
 if(!dir.exists(file.path(results_dir,"Model_Output"))){dir.create(file.path(outdir,"Model_Output"))}
