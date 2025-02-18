@@ -1,9 +1,11 @@
 # Function to pull needed info for table from sdmTMB object
 #res is sdmTMB model object
 get_tidy_coefs<-function(res){
+  df=summary(res$sd_report,p.value=TRUE) %>% as.data.frame()
+  df=df[grep("b_",rownames(df)),]
   tib=tidy(res)
   tib$statistic=tib$estimate/tib$std.error
-  tib$p_value=exp(-0.717*tib$statistic-0.416*tib$statistic^2)
+  tib$p_value=df$`Pr(>|z^2|)`
   tib$cl_low=tib$estimate-2*tib$std.error
   tib$cl_high=tib$estimate+2*tib$std.error
   tib$estimate=exp(tib$estimate)
