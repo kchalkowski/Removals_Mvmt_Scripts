@@ -1242,7 +1242,6 @@ res_nind_rps_tox = sdmTMB(indivs_per_day_offset~
                           mesh=meshtox_con,
                           spatial="on")
 
-
 # Format model info -----------------------------------------------------------
 
 ci_model_list=list(res_nind_rp_aer,
