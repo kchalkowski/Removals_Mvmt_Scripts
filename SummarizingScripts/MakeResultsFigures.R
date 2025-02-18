@@ -183,7 +183,7 @@ stk2 |> gtsave(file.path(outdir,"Parameter_Table","mvmt_rps_parms.html"))
 
 ncon_tbl=readRDS(file.path(outdir,"Model_Output","ncon_parm_gt.rds",fsep=.Platform$file.sep))
 nind_tbl=readRDS(file.path(outdir,"Model_Output","nind_parm_gt.rds",fsep=.Platform$file.sep))
-#nind_tbl has sex, shouldn't
+
 stk=tbl_stack(tbls=list(ncon_tbl,nind_tbl),
               group_header=c("N total contacts",
                              "N unique contacts"))
@@ -231,7 +231,6 @@ stk2<-as_gt(stk) %>%             # convert gtsummary table to gt
 stk2 |> gtsave(file.path(outdir,"Parameter_Table","contact_rp_parms.html"))
 
 ## Parameter table for contact removal*period*sex models -----------------------
-
 ncon_tbl_s=readRDS(file.path(outdir,"Model_Output","ncon_parm_gt_s.rds",fsep=.Platform$file.sep))
 nind_tbl_s=readRDS(file.path(outdir,"Model_Output","nind_parm_gt_s.rds",fsep=.Platform$file.sep))
 
