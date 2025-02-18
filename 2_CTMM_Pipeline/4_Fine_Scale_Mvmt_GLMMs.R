@@ -1374,7 +1374,7 @@ saveRDS(ncon_tbl,file.path(results_dir,"Model_Output","ncon_parm_gt.rds",fsep=.P
 
 #aer_tbl_s <- make_sdmTMB_gt(res_ncon_rps_aer, conaer)
 trap_tbl_s <- tbl_regression(res_ncon_rps_trap, exponentiate = TRUE)
-tox_tbl_s <- tbl_regression(res_ncon_rps_trap, exponentiate = TRUE)
+tox_tbl_s <- tbl_regression(res_ncon_rps_tox, exponentiate = TRUE)
 
 ncon_tbl_s=tbl_merge(
   tbls = list(#aer_tbl,
