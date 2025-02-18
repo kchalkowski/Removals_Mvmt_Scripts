@@ -1381,10 +1381,7 @@ ncon_tbl_s=tbl_merge(
               tox_tbl_s, 
               trap_tbl_s),
   tab_spanner = c(#"aerial",
-                  "tox","trap"),
-  tbls = list(tox_tbl, 
-              trap_tbl),
-  tab_spanner = c("tox","trap")
+                  "tox","trap")
 ) 
 
 saveRDS(ncon_tbl_s,file.path(results_dir,"Model_Output","ncon_parm_gt_s.rds",fsep=.Platform$file.sep))
