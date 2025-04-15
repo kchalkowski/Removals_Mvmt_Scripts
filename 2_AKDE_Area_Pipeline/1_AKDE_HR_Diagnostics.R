@@ -60,9 +60,9 @@ input="/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NI
 activities.raw=readRDS(paste0(input,"activities.rds"))
 
 #Load df outputs from Get_Period_AKDEs
-akaer=readRDS("/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/outdf_akde_aerial.rds")
-aktrap=readRDS("/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/outdf_akde_trap.rds")
-aktox=readRDS("/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/Data/outdf_akde_tox.rds")
+akaer=readRDS("/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/1_Data/objects/outdf_akde_aerial.rds")
+aktrap=readRDS("/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/1_Data/objects/outdf_akde_trap.rds")
+aktox=readRDS("/Users/kayleigh.chalkowski/Library/CloudStorage/OneDrive-USDA/Projects/NIFA_Analyses/NIFA_Removals_Mvmt/Pipeline/1_Data/objects/outdf_akde_tox.rds")
 
 #Fix area units-- sometimes area rec'd as hectares, meters
 Fix.Area.Units<-function(akrem){
@@ -153,6 +153,8 @@ aktox.bias$joinkey=paste(aktox.bias$animalid,aktox.bias$period,sep="_")
 #remove during for tox
 aktox.bias=aktox.bias[aktox.bias$period!="during",]
 
+#geo.trap=geo[geo$Removal.Type=="trap",]
+
 #make joinkeys
 geo.trap$joinkey=paste(geo.trap$animalid,geo.trap$removal.period.akdecalc,sep="_")
 geo.aer$joinkey=paste(geo.aer$animalid,geo.aer$removal.period.akdecalc,sep="_")
@@ -211,7 +213,7 @@ ggplot(aktox,
 #estimate nclust
 Get.SegNum<-function(pig,kmax,lmin){
   pig$indice=1:nrow(pig)
-  pig2=pig[,c(17,9,10,5)]
+  pig2=pig[,c(16,9,10,5)]
   colnames(pig2)=c("indice","x","y","dateTime")
   shift_seg <- segmentation(pig2,
                             seg.var = c("x","y"),
@@ -223,7 +225,7 @@ Get.SegNum<-function(pig,kmax,lmin){
 #Run segmentation
 Do.Seg<-function(pig,kmax,nclust,lmin){
 pig$indice=1:nrow(pig)
-pig2=pig[,c(17,9,10,5)]
+pig2=pig[,c(16,9,10,5)]
 colnames(pig2)=c("indice","x","y","dateTime")
 
 mode_segclust <- segclust(pig2,
@@ -322,6 +324,8 @@ Keep.Clust<-function(outdf,vers,outdir,append,remtype){
 # ** Test Segmentation improvements --------------------------------------------
 #set row number
 i=3
+#pig=geo.trap[geo.trap$joinkey==geo.trap$joinkey[1],]
+
 pig=geo.toxb[geo.toxb$joinkey==aktox.bias$joinkey[i],]
 ggplot(pig,aes(x=X,y=Y))+
   geom_path()

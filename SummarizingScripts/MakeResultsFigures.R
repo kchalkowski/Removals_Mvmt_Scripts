@@ -123,7 +123,7 @@ stk2=as_gt(stk) %>%             # convert gtsummary table to gt
   tab_options(data_row.padding = px(1))
 
 #For now, taking screenshot to put on sharepoint
-stk2 |> gtsave(file.path(outdir,"Parameter_Table","mvmt_rp_parms.html"))
+stk2 |> gtsave(file.path(outdir,"Parameter_Table","mvmt_rp_parms.docx"))
 
 ## Parameter table for movement removal*period*sex models ----------------------
 
@@ -176,7 +176,7 @@ stk2<-as_gt(stk) %>%             # convert gtsummary table to gt
     style=list(cell_borders(sides="bottom",weight=px(1))),
     locations=list(gt::cells_body(columns=everything(),rows=which(stk$table_body$row_type!="label")))) 
 
-stk2 |> gtsave(file.path(outdir,"Parameter_Table","mvmt_rps_parms.html"))
+stk2 |> gtsave(file.path(outdir,"Parameter_Table","mvmt_rps_parms.docx"))
 
 
 ## Parameter table for contact removal*period models ---------------------------
@@ -228,7 +228,7 @@ stk2<-as_gt(stk) %>%             # convert gtsummary table to gt
     style=list(cell_borders(sides="bottom",weight=px(1))),
     locations=list(gt::cells_body(columns=everything(),rows=which(stk$table_body$row_type!="label")))) 
 
-stk2 |> gtsave(file.path(outdir,"Parameter_Table","contact_rp_parms.html"))
+stk2 |> gtsave(file.path(outdir,"Parameter_Table","contact_rp_parms.docx"))
 
 ## Parameter table for contact removal*period*sex models -----------------------
 ncon_tbl_s=readRDS(file.path(outdir,"Model_Output","ncon_parm_gt_s.rds",fsep=.Platform$file.sep))
@@ -279,7 +279,7 @@ stk2<-as_gt(stk) %>%             # convert gtsummary table to gt
     #locations=list(gt::cells_body(columns=everything(),rows=c(1,4,8,11,14,18,21,24,28,31,34,38)))
     locations=list(gt::cells_body(columns=everything(),rows=which(stk$table_body$row_type!="label")))) 
 
-stk2 |> gtsave(file.path(outdir,"Parameter_Table","contact_rps_parms.html"))
+stk2 |> gtsave(file.path(outdir,"Parameter_Table","contact_rps_parms.docx"))
 
 # Format pred diffs ------------------------------------------------------------
 
